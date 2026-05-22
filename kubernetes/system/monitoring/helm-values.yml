@@ -17,6 +17,20 @@ grafana:
       access: proxy
       isDefault: false
 
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: custom
+          folder: Custom
+          type: file
+          disableDeletion: false
+          options:
+            path: /var/lib/grafana/dashboards/custom
+
+  dashboardsConfigMaps:
+    custom: grafana-dashboards-custom
+
 prometheus:
   prometheusSpec:
     retention: 15d
