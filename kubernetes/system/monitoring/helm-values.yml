@@ -10,6 +10,13 @@ grafana:
     size: 5Gi
     storageClass: local-path
 
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki.monitoring.svc.cluster.local:3100
+      access: proxy
+      isDefault: false
+
 prometheus:
   prometheusSpec:
     retention: 15d
