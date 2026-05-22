@@ -1,0 +1,50 @@
+---
+# Valeurs Helm pour Traefik — à appliquer avec :
+# helm upgrade --install traefik traefik/traefik -n traefik -f helm-values.yml
+deployment:
+  replicas: 1
+
+service:
+  type: LoadBalancer
+  # k3s utilise klipper-lb, l'IP externe sera celle du master
+  annotations: {}
+
+ports:
+  web:
+    port: 80
+    exposedPort: 80
+  websecure:
+    port: 443
+    exposedPort: 443
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: theo.morin1402@gmail.com
+      storage: /data/acme.json
+      httpChallenge:
+        entryPoint: web
+
+ingressRoute:
+  dashboard:
+    enabled: false  # activé manuellement avec auth plus tard
+
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+# Persister acme.json pour Let's Encrypt plus tard
+persistence:
+  enabled: true
+  size: 128Mi
+  storageClass: "local-path"  # classe par défaut k3s
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"

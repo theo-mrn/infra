@@ -1,0 +1,8 @@
+---
+# Étape 1 : sécurisation OS + déploiement clé SSH sur les deux serveurs
+# Usage: ansible-playbook -i inventory/hosts.yml playbooks/01-bootstrap.yml
+- name: Bootstrap all servers
+  hosts: all
+  gather_facts: yes
+  roles:
+    - common

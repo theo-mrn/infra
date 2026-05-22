@@ -1,0 +1,4 @@
+kubeconfig.yml
+*.retry
+.vault_pass
+ansible/inventory/group_vars/all/vault.yml

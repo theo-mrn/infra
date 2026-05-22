@@ -1,0 +1,14 @@
+---
+# Étape 2 : installation k3s (master d'abord, puis worker)
+# Usage: ansible-playbook -i inventory/hosts.yml playbooks/02-k3s.yml
+- name: Install k3s master
+  hosts: masters
+  gather_facts: yes
+  roles:
+    - k3s_master
+
+- name: Install k3s workers
+  hosts: workers
+  gather_facts: yes
+  roles:
+    - k3s_worker

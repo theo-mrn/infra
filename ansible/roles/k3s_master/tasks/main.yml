@@ -1,0 +1,42 @@
+---
+- name: Check if k3s is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Install k3s master
+  shell: |
+    curl -sfL https://get.k3s.io | sh -s - server \
+      --disable traefik \
+      --write-kubeconfig-mode 644 \
+      --node-name master
+  when: not k3s_binary.stat.exists
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Wait for k3s to be ready
+  wait_for:
+    path: /etc/rancher/k3s/k3s.yaml
+    timeout: 60
+
+- name: Fetch node token
+  slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_raw
+
+- name: Set k3s token fact
+  set_fact:
+    k3s_node_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+
+- name: Fetch kubeconfig
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ playbook_dir }}/../kubeconfig.yml"
+    flat: yes
+
+- name: Fix kubeconfig server address
+  delegate_to: localhost
+  replace:
+    path: "{{ playbook_dir }}/../kubeconfig.yml"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "https://{{ ansible_host }}:6443"

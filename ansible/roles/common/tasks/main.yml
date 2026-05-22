@@ -1,0 +1,70 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - htop
+      - ufw
+      - fail2ban
+      - unattended-upgrades
+    state: present
+
+- name: Deploy SSH public key
+  authorized_key:
+    user: root
+    key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+    state: present
+
+- name: Disable password authentication (after key is deployed)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+  notify: restart sshd
+
+- name: Enable UFW and allow SSH
+  ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Allow k3s API port (master only)
+  ufw:
+    rule: allow
+    port: "6443"
+    proto: tcp
+  when: inventory_hostname in groups['masters']
+
+- name: Allow Traefik HTTP/HTTPS
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "80"
+    - "443"
+  when: inventory_hostname in groups['masters']
+
+- name: Allow k3s internal traffic (Flannel VXLAN)
+  ufw:
+    rule: allow
+    port: "8472"
+    proto: udp
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Start and enable fail2ban
+  service:
+    name: fail2ban
+    state: started
+    enabled: yes
