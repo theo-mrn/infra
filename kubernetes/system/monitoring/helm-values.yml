@@ -1,0 +1,52 @@
+---
+grafana:
+  enabled: true
+  adminPassword: "CHANGE_ME"
+  ingress:
+    enabled: false  # on utilise IngressRoute Traefik
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: local-path
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# Monitore les nodes k3s
+nodeExporter:
+  enabled: true
+
+# Monitore les composants k3s
+kubeEtcd:
+  enabled: false  # k3s utilise sqlite, pas etcd
+
+kubeControllerManager:
+  enabled: false  # non exposé dans k3s
+
+kubeScheduler:
+  enabled: false  # non exposé dans k3s
+
+kubeProxy:
+  enabled: false  # non exposé dans k3s
