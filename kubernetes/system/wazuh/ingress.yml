@@ -1,0 +1,26 @@
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: wazuh-transport
+  namespace: wazuh
+spec:
+  insecureSkipVerify: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: wazuh-dashboard
+  namespace: wazuh
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`wazuh.cluster.afflair.app`)
+      kind: Rule
+      services:
+        - name: wazuh-dashboard
+          port: 443
+          scheme: https
+          serversTransport: wazuh-transport
+  tls:
+    certResolver: letsencrypt
