@@ -18,7 +18,7 @@ spec:
     - match: Host(`wazuh.cluster.afflair.app`)
       kind: Rule
       services:
-        - name: wazuh-dashboard
+        - name: dashboard
           port: 443
           scheme: https
           serversTransport: wazuh-transport
