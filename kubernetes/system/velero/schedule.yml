@@ -1,0 +1,14 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-backup
+  namespace: velero
+spec:
+  schedule: "0 2 * * *"  # tous les jours à 2h du matin
+  template:
+    includedNamespaces:
+      - monitoring
+      - traefik
+    storageLocation: aws
+    ttl: 168h  # garde 7 jours de backups
+    snapshotVolumes: false  # local-path ne supporte pas les snapshots
