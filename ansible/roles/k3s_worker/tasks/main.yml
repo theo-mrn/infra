@@ -11,6 +11,9 @@
       --token {{ hostvars['master']['k3s_node_token'] }} \
       --node-name worker
   when: not k3s_binary.stat.exists
+  environment:
+    K3S_URL: "https://{{ hostvars['master']['ansible_host'] }}:6443"
+    K3S_TOKEN: "{{ hostvars['master']['k3s_node_token'] }}"
   args:
     creates: /usr/local/bin/k3s
 

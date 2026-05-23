@@ -34,14 +34,19 @@
     rule: allow
     name: OpenSSH
 
-- name: Allow k3s API port (master only)
+- name: Allow k3s API and supervisor ports (master only)
   ufw:
     rule: allow
-    port: "6443"
+    port: "{{ item }}"
     proto: tcp
+  loop:
+    - "6443"   # k3s API
+    - "9345"   # k3s supervisor
+    - "10250"  # kubelet
+    - "9100"   # node-exporter
   when: inventory_hostname in groups['masters']
 
-- name: Allow Traefik HTTP/HTTPS
+- name: Allow Traefik HTTP/HTTPS (master only)
   ufw:
     rule: allow
     port: "{{ item }}"
@@ -56,6 +61,16 @@
     rule: allow
     port: "8472"
     proto: udp
+
+- name: Allow kubelet and node-exporter (worker only)
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "10250"  # kubelet
+    - "9100"   # node-exporter
+  when: inventory_hostname in groups['workers']
 
 - name: Enable UFW
   ufw:
