@@ -1,16 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
-WAZUH_VERSION="v4.14.1"
+WAZUH_VERSION="v4.14.5"
 TMPDIR=$(mktemp -d)
 trap "rm -rf ${TMPDIR}" EXIT
 
 echo "==> Cloning wazuh-kubernetes ${WAZUH_VERSION}..."
-git clone --depth=1 --branch "${WAZUH_VERSION}" https://github.com/wazuh/wazuh-kubernetes.git "${TMPDIR}/wazuh-kubernetes"
+git clone https://github.com/wazuh/wazuh-kubernetes.git "${TMPDIR}/wazuh-kubernetes"
+git -C "${TMPDIR}/wazuh-kubernetes" checkout "${WAZUH_VERSION}"
 
 cd "${TMPDIR}/wazuh-kubernetes"
 
-# Use longhorn as the wazuh-storage provisioner
+# ── Generate TLS certificates ─────────────────────────────────────────────────
+echo "==> Generating TLS certificates..."
+bash wazuh/certs/indexer_cluster/generate_certs.sh > /dev/null
+bash wazuh/certs/dashboard_http/generate_certs.sh > /dev/null
+
+# ── Patch storage class to Longhorn ──────────────────────────────────────────
 cat > envs/local-env/storage-class.yaml <<'EOF'
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -22,11 +28,12 @@ parameters:
 reclaimPolicy: Retain
 EOF
 
-echo "==> Deploying Wazuh (local-env overlay with Longhorn storage)..."
+# ── Deploy ────────────────────────────────────────────────────────────────────
+echo "==> Deploying Wazuh..."
 kubectl apply -k envs/local-env/
 
-echo "==> Waiting for Wazuh indexer..."
-kubectl rollout status statefulset/wazuh-indexer -n wazuh --timeout=300s
+echo "==> Waiting for Wazuh indexer (can take several minutes)..."
+kubectl rollout status statefulset/wazuh-indexer -n wazuh --timeout=600s
 
 echo "==> Waiting for Wazuh manager master..."
 kubectl rollout status statefulset/wazuh-manager-master -n wazuh --timeout=300s
@@ -36,5 +43,5 @@ kubectl rollout status deployment/wazuh-dashboard -n wazuh --timeout=300s
 
 echo ""
 echo "==> Wazuh is up!"
-echo "    Dashboard: kubectl port-forward svc/wazuh-dashboard 5601:5601 -n wazuh"
+echo "    Dashboard: kubectl port-forward svc/wazuh-dashboard 443:443 -n wazuh"
 echo "    Login: admin / SecretPassword  <-- change immediately!"
