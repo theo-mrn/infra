@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/theo-mrn/time_server
-    targetRevision: main
+    targetRevision: gitops/prod
     path: kubernetes/prod
   destination:
     server: https://kubernetes.default.svc
@@ -28,7 +28,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/theo-mrn/time_server
-    targetRevision: stag
+    targetRevision: gitops/staging
     path: kubernetes/staging
   destination:
     server: https://kubernetes.default.svc
