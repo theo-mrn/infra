@@ -8,7 +8,8 @@ grafana:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: local-path
+    storageClass: longhorn
+    existingClaim: grafana-longhorn
 
   additionalDataSources:
     - name: Loki
@@ -37,7 +38,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: local-path
+          storageClassName: longhorn
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
@@ -49,7 +50,7 @@ alertmanager:
     storage:
       volumeClaimTemplate:
         spec:
-          storageClassName: local-path
+          storageClassName: longhorn
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:

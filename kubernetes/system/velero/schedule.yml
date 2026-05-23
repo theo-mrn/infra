@@ -11,4 +11,6 @@ spec:
       - traefik
     storageLocation: aws
     ttl: 168h  # garde 7 jours de backups
-    snapshotVolumes: false  # local-path ne supporte pas les snapshots
+    snapshotVolumes: true
+    volumeSnapshotLocations:
+      - csi

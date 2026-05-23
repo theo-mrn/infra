@@ -39,7 +39,8 @@ logs:
 persistence:
   enabled: true
   size: 128Mi
-  storageClass: "local-path"  # classe par défaut k3s
+  storageClass: longhorn
+  existingClaim: traefik-longhorn
 
 tolerations:
   - key: node-role.kubernetes.io/control-plane

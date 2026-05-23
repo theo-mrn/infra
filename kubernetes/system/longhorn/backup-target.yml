@@ -1,0 +1,9 @@
+apiVersion: longhorn.io/v1beta2
+kind: BackupTarget
+metadata:
+  name: default
+  namespace: longhorn-system
+spec:
+  backupTargetURL: "s3://velero-k3s-cluster-backup@eu-west-3/longhorn"
+  credentialSecret: longhorn-aws-credentials
+  pollInterval: 300
