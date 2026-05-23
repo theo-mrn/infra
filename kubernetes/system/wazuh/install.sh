@@ -26,7 +26,11 @@ provisioner: driver.longhorn.io
 parameters:
   numberOfReplicas: "1"
 reclaimPolicy: Retain
+allowVolumeExpansion: true
 EOF
+
+# ── Patch PVC sizes (default 500Mi is too small for Filebeat) ─────────────────
+find . -name "*.yaml" -exec sed -i 's/storage: 500Mi/storage: 5Gi/g' {} \;
 
 # ── Deploy ────────────────────────────────────────────────────────────────────
 echo "==> Deploying Wazuh..."
