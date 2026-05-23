@@ -1,19 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
-# Removes all Wazuh resources but keeps the PVCs (data preserved)
-# To also delete data, add: kubectl delete pvc --all -n wazuh
+NODES=("76.13.44.160" "217.65.146.24")
 
-WAZUH_VERSION="v4.14.1"
-TMPDIR=$(mktemp -d)
-trap "rm -rf ${TMPDIR}" EXIT
+echo "==> Stopping Wazuh agents on nodes..."
+for NODE in "${NODES[@]}"; do
+  ssh "root@${NODE}" bash <<'EOF'
+systemctl stop wazuh-agent || true
+systemctl disable wazuh-agent || true
+# Clean agent DBs so next install starts fresh
+rm -f /var/ossec/queue/db/0*.db /var/ossec/queue/db/0*.db-shm /var/ossec/queue/db/0*.db-wal
+EOF
+done
 
-git clone --depth=1 --branch "${WAZUH_VERSION}" https://github.com/wazuh/wazuh-kubernetes.git "${TMPDIR}/wazuh-kubernetes"
-
-cd "${TMPDIR}/wazuh-kubernetes"
-
-kubectl delete -k envs/local-env/ --ignore-not-found
+echo "==> Removing Wazuh from cluster..."
+kubectl delete namespace wazuh --ignore-not-found
 kubectl delete storageclass wazuh-storage --ignore-not-found
 
-echo "==> Wazuh stopped. PVCs kept intact for next run."
-echo "    To delete data: kubectl delete pvc --all -n wazuh"
+echo "==> Wazuh stopped."
+echo "    Agent binaries kept on nodes (apt). Data PVCs deleted with namespace."
+echo "    Run install.sh to redeploy from scratch."

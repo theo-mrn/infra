@@ -2,6 +2,11 @@
 set -euo pipefail
 
 WAZUH_VERSION="v4.14.5"
+WAZUH_MANAGER_IP="76.13.44.160"
+AUTHD_PASS="password"
+NODES=("76.13.44.160" "217.65.146.24")
+NODE_NAMES=("master" "worker")
+
 TMPDIR=$(mktemp -d)
 trap "rm -rf ${TMPDIR}" EXIT
 
@@ -29,7 +34,7 @@ reclaimPolicy: Retain
 allowVolumeExpansion: true
 EOF
 
-# ── Patch PVC sizes (default 500Mi is too small for Filebeat) ─────────────────
+# ── Patch PVC sizes (default 500Mi is too small) ──────────────────────────────
 find . -name "*.yaml" -exec sed -i 's/storage: 500Mi/storage: 5Gi/g' {} \;
 
 # ── Deploy ────────────────────────────────────────────────────────────────────
@@ -45,7 +50,28 @@ kubectl rollout status statefulset/wazuh-manager-master -n wazuh --timeout=300s
 echo "==> Waiting for Wazuh dashboard..."
 kubectl rollout status deployment/wazuh-dashboard -n wazuh --timeout=300s
 
+# ── Install agents on nodes ───────────────────────────────────────────────────
+echo "==> Installing Wazuh agents on nodes..."
+for i in "${!NODES[@]}"; do
+  NODE="${NODES[$i]}"
+  NAME="${NODE_NAMES[$i]}"
+  echo "    -> ${NAME} (${NODE})"
+  ssh "root@${NODE}" bash <<EOF
+set -e
+curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
+echo 'deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main' > /etc/apt/sources.list.d/wazuh.list
+apt-get update -qq
+WAZUH_MANAGER='${WAZUH_MANAGER_IP}' WAZUH_AGENT_NAME='${NAME}' apt-get install -y wazuh-agent 2>/dev/null || true
+sed -i 's|<address>.*</address>|<address>${WAZUH_MANAGER_IP}</address>|g' /var/ossec/etc/ossec.conf
+echo '${AUTHD_PASS}' > /var/ossec/etc/authd.pass
+chmod 640 /var/ossec/etc/authd.pass
+chown root:wazuh /var/ossec/etc/authd.pass
+systemctl enable wazuh-agent
+systemctl restart wazuh-agent
+EOF
+done
+
 echo ""
 echo "==> Wazuh is up!"
-echo "    Dashboard: kubectl port-forward svc/wazuh-dashboard 443:443 -n wazuh"
+echo "    Dashboard: https://wazuh.cluster.afflair.app"
 echo "    Login: admin / SecretPassword  <-- change immediately!"
