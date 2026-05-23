@@ -27,7 +27,13 @@ kubectl create secret generic longhorn-aws-credentials \
   --from-literal=AWS_ENDPOINTS="" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl apply -f "$(dirname "$0")/backup-target.yml"
+kubectl patch backuptargets.longhorn.io default -n longhorn-system --type merge -p "{
+  \"spec\": {
+    \"backupTargetURL\": \"s3://velero-k3s-cluster-backup@eu-west-3/longhorn\",
+    \"credentialSecret\": \"longhorn-aws-credentials\",
+    \"pollInterval\": 300
+  }
+}"
 
 echo "Longhorn installé. Pods :"
 kubectl get pods -n longhorn-system

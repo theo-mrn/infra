@@ -33,5 +33,12 @@ helm upgrade --install velero vmware-tanzu/velero \
   --values "$(dirname "$0")/helm-values.yml" \
   --wait
 
+# Secret pour le CronJob de backup Loki (namespace monitoring)
+kubectl create secret generic velero-aws-credentials-loki \
+  --namespace monitoring \
+  --from-literal=access_key_id="${VELERO_ACCESS_KEY_ID}" \
+  --from-literal=secret_access_key="${VELERO_SECRET_ACCESS_KEY}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 echo "Velero installé. Pods :"
 kubectl get pods -n velero
