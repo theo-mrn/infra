@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trivy-dashboard-web-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/trivyhub/trivy-dashboard-web
+    targetRevision: gitops/prod
+    path: helm/trivyhub
+    helm:
+      valueFiles:
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trivyhub
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trivy-dashboard-web-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/trivyhub/trivy-dashboard-web
+    targetRevision: gitops/staging
+    path: helm/trivyhub
+    helm:
+      valueFiles:
+        - values-staging.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trivyhub-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
