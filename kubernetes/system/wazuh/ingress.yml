@@ -17,6 +17,9 @@ spec:
   routes:
     - match: Host(`wazuh.cluster.afflair.app`)
       kind: Rule
+      middlewares:
+        - name: authelia
+          namespace: authelia
       services:
         - name: dashboard
           port: 443

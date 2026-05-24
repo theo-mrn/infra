@@ -29,6 +29,10 @@ ingressRoute:
   dashboard:
     enabled: false  # activé manuellement avec auth plus tard
 
+providers:
+  kubernetesCRD:
+    allowCrossNamespace: true
+
 logs:
   general:
     level: INFO

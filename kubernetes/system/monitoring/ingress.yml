@@ -9,6 +9,9 @@ spec:
   routes:
     - match: Host(`grafana.cluster.afflair.app`)
       kind: Rule
+      middlewares:
+        - name: authelia
+          namespace: authelia
       services:
         - name: kube-prometheus-stack-grafana
           port: 80

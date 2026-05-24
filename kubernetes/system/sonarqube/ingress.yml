@@ -1,19 +1,19 @@
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: traefik-dashboard
-  namespace: traefik
+  name: sonarqube
+  namespace: sonarqube
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`traefik.cluster.afflair.app`)
+    - match: Host(`sonarqube.cluster.afflair.app`)
       kind: Rule
       middlewares:
         - name: authelia
           namespace: authelia
       services:
-        - name: api@internal
-          kind: TraefikService
+        - name: sonarqube-sonarqube
+          port: 9000
   tls:
     certResolver: letsencrypt

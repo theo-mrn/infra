@@ -1,0 +1,46 @@
+replicaCount: 1
+
+monitoringPasscode: "define_your_passcode"
+
+community:
+  enabled: true
+
+service:
+  type: ClusterIP
+  port: 9000
+
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 400m
+    memory: 1Gi
+  limits:
+    cpu: 800m
+    memory: 2Gi
+
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 10Gi
+
+postgresql:
+  enabled: false
+
+jdbcOverwrite:
+  enabled: true
+  jdbcUrl: "jdbc:postgresql://sonarqube-db-postgresql.sonarqube.svc.cluster.local:5432/sonarqube"
+  jdbcUsername: "sonarqube"
+  jdbcPassword: "sonarqube"
+
+startupProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 60
+  timeoutSeconds: 5
+
+jvmOpts: "-Xmx1024m -Xms512m"
+
+sonarProperties:
+  sonar.forceAuthentication: "true"
