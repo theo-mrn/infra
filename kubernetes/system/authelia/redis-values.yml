@@ -1,0 +1,17 @@
+architecture: standalone
+
+auth:
+  enabled: false
+
+master:
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    size: 1Gi
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 20m
+    limits:
+      memory: 128Mi
+      cpu: 100m
