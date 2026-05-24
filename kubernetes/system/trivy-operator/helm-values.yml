@@ -1,0 +1,10 @@
+trivy:
+  ignoreUnfixed: true
+
+operator:
+  scanJobsConcurrentLimit: 10
+  vulnerabilityScannerEnabled: true
+  configAuditScannerEnabled: true
+  rbacAssessmentScannerEnabled: true
+  infraAssessmentScannerEnabled: true
+  clusterComplianceEnabled: false
