@@ -15,6 +15,10 @@ spec:
           enabled: true
           host: beacon.cluster.afflair.app
           tls: true
+        wazuh:
+          indexerURL: "https://indexer.wazuh.svc.cluster.local:9200"
+          user: "admin"
+          password: "SecretPassword"
   destination:
     server: https://kubernetes.default.svc
     namespace: beacon
