@@ -37,6 +37,35 @@ EOF
 # ── Patch PVC sizes (default 500Mi is too small) ──────────────────────────────
 find . -name "*.yaml" -exec sed -i 's/storage: 500Mi/storage: 5Gi/g' {} \;
 
+# ── Patch wazuh-manager-master memory limit (512Mi is too low, causes OOMKill) ──
+sed -i 's/memory: 512Mi/memory: 1Gi/g' wazuh/wazuh_managers/wazuh-master-sts.yaml
+
+# ── Patch ossec.conf: enable Active Response (firewall-drop) ──────────────────
+for conf in wazuh/wazuh_managers/wazuh_conf/master.conf wazuh/wazuh_managers/wazuh_conf/worker.conf; do
+  python3 - "${conf}" <<'PYEOF'
+import sys
+path = sys.argv[1]
+content = open(path).read()
+old = """  <!--
+  <active-response>
+    active-response options here
+  </active-response>
+  -->"""
+new = """  <!-- Active Response: firewall-drop on brute-force and web attacks -->
+  <active-response>
+    <command>firewall-drop</command>
+    <location>local</location>
+    <rules_id>5712,5720,31151,31152</rules_id>
+    <timeout>3600</timeout>
+  </active-response>"""
+if old in content:
+    open(path, 'w').write(content.replace(old, new))
+    print(f"  Patched active-response in {path}")
+else:
+    print(f"  WARNING: active-response placeholder not found in {path}")
+PYEOF
+done
+
 # ── Deploy ────────────────────────────────────────────────────────────────────
 echo "==> Deploying Wazuh..."
 kubectl apply -k envs/local-env/
