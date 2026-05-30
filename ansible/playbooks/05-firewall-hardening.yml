@@ -2,20 +2,54 @@
 # Usage: ansible-playbook playbooks/05-firewall-hardening.yml --ask-vault-pass
 # Restreint les ports sensibles aux IPs de gestion uniquement
 - name: Firewall hardening - restrict sensitive ports
-  hosts: masters
+  hosts: all
   become: true
   vars:
     management_ips:
       - "37.71.179.238"  # IP de gestion Theo
       - "217.65.146.24"  # worker
+      - "76.13.44.160"   # master
 
   tasks:
-    - name: Remove public 6443 rule
+    # SSH
+    - name: Remove public SSH rules
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+        delete: true
+      ignore_errors: true
+
+    - name: Remove public 22/tcp rule
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        delete: true
+      ignore_errors: true
+
+    - name: Allow SSH from management IPs only
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+        src: "{{ item }}"
+      loop: "{{ management_ips }}"
+
+    # 6443 (masters only)
+    - name: Remove public 6443 rules
+      community.general.ufw:
+        rule: allow
+        port: "6443"
+        delete: true
+      ignore_errors: true
+
+    - name: Remove public 6443/tcp rule
       community.general.ufw:
         rule: allow
         port: "6443"
         proto: tcp
         delete: true
+      ignore_errors: true
 
     - name: Allow 6443 from management IPs only
       community.general.ufw:
@@ -24,8 +58,17 @@
         proto: tcp
         src: "{{ item }}"
       loop: "{{ management_ips }}"
+      when: inventory_hostname in groups['masters']
 
-    - name: Remove public 10250 rule (if exists)
+    # 10250 kubelet
+    - name: Remove public 10250 rules
+      community.general.ufw:
+        rule: allow
+        port: "10250"
+        delete: true
+      ignore_errors: true
+
+    - name: Remove public 10250/tcp rule
       community.general.ufw:
         rule: allow
         port: "10250"
