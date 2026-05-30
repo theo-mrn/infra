@@ -47,18 +47,19 @@ spec:
         customRules:
           falco_rules.local.yaml: |-
             - rule: Contact K8S API Server From Container
-              append: true
+              override:
+                exceptions: append
               exceptions:
                 - name: known_k8s_api_callers
-                  fields: [proc.name, container.image.repository]
+                  fields: [proc.exepath]
                   values:
-                    - [argocd-applicat, quay.io/argoproj/argocd]
-                    - [python, ""]
-                    - [Thread-2, ""]
-                    - [Thread-3, ""]
+                    - [/usr/local/bin/argocd]
+                    - [/usr/local/bin/python3.14]
+                    - [/usr/local/bin/python3.15]
 
             - rule: Read sensitive file untrusted
-              append: true
+              override:
+                exceptions: append
               exceptions:
                 - name: trusted_sensitive_file_readers
                   fields: [proc.exepath, container.id]
