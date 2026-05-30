@@ -34,8 +34,8 @@ spec:
               hostport: "http://loki.monitoring.svc.cluster.local:3100"
               minimumpriority: "notice"
               customlabels: "app:falco,cluster:afflair"
-            slack:
-              webhookurl: ""
+            discord:
+              webhookurl: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
               minimumpriority: "warning"
           webui:
             enabled: true

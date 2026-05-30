@@ -75,6 +75,31 @@ spec:
                       storage: 20Gi
         alertmanager:
           enabled: true
+          config:
+            global:
+              resolve_timeout: 5m
+            route:
+              group_by: ["alertname", "severity"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              receiver: discord
+              routes:
+                - matchers:
+                    - severity = critical
+                  receiver: discord
+                  repeat_interval: 1h
+            receivers:
+              - name: discord
+                discord_configs:
+                  - webhook_url: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
+                    title: '{{ template "discord.default.title" . }}'
+                    message: |-
+                      {{ range .Alerts }}
+                      **{{ .Labels.alertname }}** — {{ .Labels.severity | toUpper }}
+                      {{ .Annotations.summary }}
+                      {{ .Annotations.description }}
+                      {{ end }}
           alertmanagerSpec:
             storage:
               volumeClaimTemplate:
