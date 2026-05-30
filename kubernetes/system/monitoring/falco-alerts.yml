@@ -51,7 +51,7 @@ spec:
 
         - alert: FalcoSilenced
           expr: |
-            increase(falcosecurity_falcosidekick_falco_events_total[15m]) == 0
+            absent(falcosecurity_falcosidekick_falco_events_total)
           for: 15m
           labels:
             severity: warning
