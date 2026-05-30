@@ -92,10 +92,10 @@ data:
             "name": "priority",
             "type": "custom",
             "label": "Priority",
-            "query": "critical,emergency,alert,error,warning,notice",
+            "query": "Notice,Warning,Error,Critical,Alert,Emergency",
             "current": { "text": "All", "value": "" },
             "includeAll": true,
-            "allValue": ".*",
+            "allValue": ".+",
             "multi": false
           }
         ]
@@ -104,7 +104,7 @@ data:
         {
           "type": "stat",
           "title": "Total Events (6h)",
-          "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+          "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
           "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "options": { "colorMode": "background", "textMode": "auto" },
           "fieldConfig": {
@@ -113,8 +113,8 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
-                  { "color": "yellow", "value": 10 },
-                  { "color": "red", "value": 50 }
+                  { "color": "yellow", "value": 50 },
+                  { "color": "red", "value": 200 }
                 ]
               }
             }
@@ -122,7 +122,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "count_over_time({app=\"falcosidekick\"}[6h])",
+              "expr": "sum(count_over_time({priority=~\".+\"}[6h]))",
               "refId": "A"
             }
           ]
@@ -130,7 +130,7 @@ data:
         {
           "type": "stat",
           "title": "Critical / Emergency",
-          "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+          "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
           "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "options": { "colorMode": "background", "textMode": "auto" },
           "fieldConfig": {
@@ -147,7 +147,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "count_over_time({app=\"falcosidekick\"} |~ \"critical|emergency\" [6h])",
+              "expr": "sum(count_over_time({priority=~\"Critical|Emergency|Alert\"}[6h]))",
               "refId": "A"
             }
           ]
@@ -155,7 +155,7 @@ data:
         {
           "type": "stat",
           "title": "Warning / Error",
-          "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+          "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
           "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "options": { "colorMode": "background", "textMode": "auto" },
           "fieldConfig": {
@@ -165,7 +165,7 @@ data:
                 "steps": [
                   { "color": "green", "value": null },
                   { "color": "yellow", "value": 1 },
-                  { "color": "red", "value": 10 }
+                  { "color": "red", "value": 20 }
                 ]
               }
             }
@@ -173,7 +173,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "count_over_time({app=\"falcosidekick\"} |~ \"warning|error\" [6h])",
+              "expr": "sum(count_over_time({priority=~\"Warning|Error\"}[6h]))",
               "refId": "A"
             }
           ]
@@ -187,7 +187,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "sum by (priority) (count_over_time({app=\"falcosidekick\"} | json | __error__=\"\" [5m]))",
+              "expr": "sum by (priority) (count_over_time({priority=~\".+\"}[5m]))",
               "legendFormat": "{{priority}}",
               "refId": "A"
             }
@@ -201,7 +201,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "topk(10, sum by (rule) (count_over_time({app=\"falcosidekick\"} | json | __error__=\"\" [6h])))",
+              "expr": "topk(10, sum by (rule) (count_over_time({priority=~\".+\"}[6h])))",
               "legendFormat": "{{rule}}",
               "refId": "A"
             }
@@ -209,14 +209,14 @@ data:
         },
         {
           "type": "barchart",
-          "title": "Top namespaces concernés",
+          "title": "Top règles par priorité",
           "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
           "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "topk(10, sum by (k8s_ns_name) (count_over_time({app=\"falcosidekick\"} | json | __error__=\"\" [6h])))",
-              "legendFormat": "{{k8s_ns_name}}",
+              "expr": "topk(10, sum by (rule, priority) (count_over_time({priority=~\".+\"}[6h])))",
+              "legendFormat": "{{priority}} - {{rule}}",
               "refId": "A"
             }
           ]
@@ -237,7 +237,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "{app=\"falcosidekick\"} | json | priority=~\"$priority\"",
+              "expr": "{priority=~\"$priority\"}",
               "refId": "A"
             }
           ]
@@ -245,3 +245,4 @@ data:
       ],
       "schemaVersion": 38
     }
+    
