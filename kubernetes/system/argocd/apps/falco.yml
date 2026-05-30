@@ -38,9 +38,7 @@ spec:
               webhookurl: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
               minimumpriority: "warning"
           webui:
-            enabled: true
-            ingress:
-              enabled: false
+            enabled: false
         tolerations:
           - effect: NoSchedule
             key: node-role.kubernetes.io/control-plane
