@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lynis
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lynis-audit
+  namespace: lynis
+spec:
+  schedule: "0 3 * * 0"  # every Sunday at 3am
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          hostPID: true
+          hostNetwork: true
+          hostIPC: true
+          restartPolicy: OnFailure
+          tolerations:
+            - operator: Exists
+          nodeSelector: {}
+          containers:
+            - name: lynis
+              image: cisofy/lynis:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  lynis audit system --no-colors --quiet 2>&1
+                  echo "==> Lynis audit score:"
+                  lynis audit system --no-colors --quiet 2>&1 | grep "Hardening index"
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - name: host-root
+                  mountPath: /hostfs
+                  readOnly: true
+                - name: host-etc
+                  mountPath: /etc
+                  readOnly: true
+          volumes:
+            - name: host-root
+              hostPath:
+                path: /
+            - name: host-etc
+              hostPath:
+                path: /etc
