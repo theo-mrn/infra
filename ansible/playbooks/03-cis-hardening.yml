@@ -1,0 +1,6 @@
+---
+- name: CIS Kubernetes Benchmark hardening (kube-bench FAILs)
+  hosts: all
+  become: true
+  roles:
+    - cis_hardening

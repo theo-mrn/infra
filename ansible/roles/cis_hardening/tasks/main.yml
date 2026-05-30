@@ -1,0 +1,92 @@
+---
+# 4.1.3 / 4.1.4 - proxy kubeconfig permissions
+- name: Fix proxy kubeconfig permissions (4.1.3)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "0600"
+    owner: root
+    group: root
+  loop:
+    - /var/lib/rancher/k3s/agent/kubeproxy.kubeconfig
+    - /var/lib/rancher/k3s/server/cred/controller.kubeconfig
+  ignore_errors: true
+
+# 4.1.5 / 4.1.6 - kubelet.conf permissions
+- name: Fix kubelet kubeconfig permissions (4.1.5 / 4.1.6)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "0600"
+    owner: root
+    group: root
+  loop:
+    - /var/lib/rancher/k3s/agent/kubelet.kubeconfig
+    - /etc/rancher/k3s/k3s.yaml
+  ignore_errors: true
+
+# 4.1.7 / 4.1.8 - CA certificate permissions
+- name: Find CA certificate files (4.1.7 / 4.1.8)
+  ansible.builtin.find:
+    paths:
+      - /var/lib/rancher/k3s/agent
+      - /var/lib/rancher/k3s/server/tls
+    patterns: "*.crt,*.pem"
+    recurse: false
+  register: ca_files
+  ignore_errors: true
+
+- name: Fix CA certificate permissions (4.1.7 / 4.1.8)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "0600"
+    owner: root
+    group: root
+  loop: "{{ ca_files.files }}"
+  ignore_errors: true
+
+# 4.2.6 - protect-kernel-defaults
+- name: Set kernel defaults for kubelet (4.2.6)
+  ansible.builtin.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/90-kubelet.conf
+    reload: true
+  loop:
+    - { key: "vm.overcommit_memory", value: "1" }
+    - { key: "vm.panic_on_oom", value: "0" }
+    - { key: "kernel.panic", value: "10" }
+    - { key: "kernel.panic_on_oops", value: "1" }
+
+- name: Configure kubelet protect-kernel-defaults (4.2.6)
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/kubelet-config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      protectKernelDefaults: true
+  notify: restart k3s
+
+# 4.2.10 - kubelet TLS cert/key
+- name: Check if kubelet TLS certs exist (4.2.10)
+  ansible.builtin.stat:
+    path: /var/lib/rancher/k3s/agent/serving-kubelet.crt
+  register: kubelet_tls_cert
+
+- name: Configure kubelet TLS in k3s config (4.2.10)
+  ansible.builtin.blockinfile:
+    path: /etc/rancher/k3s/config.yaml
+    create: true
+    owner: root
+    group: root
+    mode: "0600"
+    marker: "# {mark} CIS 4.2.10 kubelet TLS"
+    block: |
+      kubelet-arg:
+        - "tls-cert-file=/var/lib/rancher/k3s/agent/serving-kubelet.crt"
+        - "tls-private-key-file=/var/lib/rancher/k3s/agent/serving-kubelet.key"
+        - "protect-kernel-defaults=true"
+  notify: restart k3s
+  when: kubelet_tls_cert.stat.exists

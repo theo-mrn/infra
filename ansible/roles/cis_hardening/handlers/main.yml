@@ -1,0 +1,6 @@
+---
+- name: restart k3s
+  ansible.builtin.systemd:
+    name: "{{ 'k3s' if inventory_hostname in groups['masters'] else 'k3s-agent' }}"
+    state: restarted
+    daemon_reload: true
