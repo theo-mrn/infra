@@ -1,0 +1,41 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: falco-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: falco.critical
+      interval: 1m
+      rules:
+        - alert: FalcoCriticalEvent
+          expr: |
+            sum(count_over_time({app="falco"} | json | priority=~"critical|emergency|alert" [5m])) > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Falco — événement critique détecté"
+            description: "Un événement de priorité critical/emergency/alert a été détecté dans le cluster. Vérifier le dashboard Falco dans Grafana."
+
+        - alert: FalcoHighVolumeWarnings
+          expr: |
+            sum(count_over_time({app="falco"} | json | priority="warning" [10m])) > 20
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Falco — volume élevé d'avertissements"
+            description: "Plus de 20 événements warning Falco en 10 minutes. Possible attaque ou misconfiguration."
+
+        - alert: FalcoSilenced
+          expr: |
+            sum(count_over_time({app="falco"} [15m])) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Falco — aucun événement reçu"
+            description: "Falco n'envoie plus d'événements depuis 15 minutes. Le service est peut-être arrêté."

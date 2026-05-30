@@ -79,3 +79,169 @@ data:
       ],
       "schemaVersion": 38
     }
+  falco.json: |
+    {
+      "title": "Falco Security Events",
+      "uid": "falco-security-v1",
+      "timezone": "browser",
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "priority",
+            "type": "custom",
+            "label": "Priority",
+            "query": "critical,emergency,alert,error,warning,notice",
+            "current": { "text": "All", "value": "" },
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": false
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Total Events (6h)",
+          "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "options": { "colorMode": "background", "textMode": "auto" },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 10 },
+                  { "color": "red", "value": 50 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "count_over_time({app=\"falco\"}[6h])",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Critical / Emergency",
+          "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "options": { "colorMode": "background", "textMode": "auto" },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 1 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "count_over_time({app=\"falco\"} |~ \"critical|emergency\" [6h])",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Warning / Error",
+          "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "options": { "colorMode": "background", "textMode": "auto" },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "red", "value": 10 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "count_over_time({app=\"falco\"} |~ \"warning|error\" [6h])",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Events par priorité",
+          "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "options": { "tooltip": { "mode": "multi" } },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "sum by (priority) (count_over_time({app=\"falco\"} | json | __error__=\"\" [5m]))",
+              "legendFormat": "{{priority}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "barchart",
+          "title": "Top règles déclenchées",
+          "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "topk(10, sum by (rule) (count_over_time({app=\"falco\"} | json | __error__=\"\" [6h])))",
+              "legendFormat": "{{rule}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "barchart",
+          "title": "Top namespaces concernés",
+          "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "topk(10, sum by (k8s_ns_name) (count_over_time({app=\"falco\"} | json | __error__=\"\" [6h])))",
+              "legendFormat": "{{k8s_ns_name}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "logs",
+          "title": "Flux d'événements Falco",
+          "gridPos": { "x": 0, "y": 20, "w": 24, "h": 12 },
+          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+          "options": {
+            "dedupStrategy": "none",
+            "showLabels": true,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": false,
+            "enableLogDetails": true,
+            "sortOrder": "Descending"
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+              "expr": "{app=\"falco\"} | json | priority=~\"$priority\"",
+              "refId": "A"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 38
+    }
