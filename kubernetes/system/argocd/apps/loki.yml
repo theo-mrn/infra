@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://grafana.github.io/helm-charts
     chart: loki
-    targetRevision: "6.*"
+    targetRevision: "7.*"
     helm:
       valuesObject:
         loki:
