@@ -1,0 +1,87 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crowdsec
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://crowdsecurity.github.io/helm-charts
+    chart: crowdsec
+    targetRevision: "0.*"
+    helm:
+      valuesObject:
+        container_runtime: containerd
+        agent:
+          acquisition:
+            - namespace: traefik
+              podName: traefik-*
+              program: traefik
+            - namespace: kube-system
+              podName: kube-apiserver-*
+              program: kube-apiserver
+          env:
+            - name: COLLECTIONS
+              value: "crowdsecurity/traefik crowdsecurity/linux crowdsecurity/sshd"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        lapi:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crowdsec
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crowdsec-traefik-bouncer
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://crowdsecurity.github.io/helm-charts
+    chart: crowdsec-traefik-bouncer
+    targetRevision: "0.*"
+    helm:
+      valuesObject:
+        bouncer:
+          crowdsec_lapi_url: http://crowdsec-service.crowdsec.svc.cluster.local:8080
+          crowdsec_lapi_key: ""
+          mode: stream
+          update_frequency: 15s
+          ban_response_code: 403
+          ban_response_msg: "Access denied by CrowdSec"
+        traefik:
+          entryPoints:
+            - web
+            - websecure
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crowdsec
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
