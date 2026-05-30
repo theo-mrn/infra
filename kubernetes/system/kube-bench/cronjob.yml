@@ -103,6 +103,10 @@ spec:
                 - name: usr-lib-systemd
                   mountPath: /usr/lib/systemd
                   readOnly: true
+                - name: node-cfg
+                  mountPath: /opt/kube-bench/cfg/k3s-cis-1.24/node.yaml
+                  subPath: node.yaml
+                  readOnly: true
           volumes:
             - name: var-lib-etcd
               hostPath:
@@ -149,3 +153,6 @@ spec:
             - name: usr-lib-systemd
               hostPath:
                 path: /usr/lib/systemd
+            - name: node-cfg
+              configMap:
+                name: kube-bench-node-cfg

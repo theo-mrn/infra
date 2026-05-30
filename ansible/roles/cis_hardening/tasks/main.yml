@@ -71,7 +71,7 @@
     path: /var/lib/rancher/k3s/agent/serving-kubelet.crt
   register: kubelet_tls_cert
 
-- name: Remove old CIS 4.2.10 kubelet TLS block
+- name: Remove old CIS blocks from k3s config
   ansible.builtin.blockinfile:
     path: /etc/rancher/k3s/config.yaml
     marker: "# {mark} CIS 4.2.10 kubelet TLS"
@@ -79,7 +79,7 @@
     state: absent
   ignore_errors: true
 
-- name: Configure kubelet args in k3s config (4.2.6 + 4.2.10)
+- name: Configure k3s config for CIS hardening (4.2.6 + 4.2.10)
   ansible.builtin.blockinfile:
     path: /etc/rancher/k3s/config.yaml
     create: true
@@ -88,6 +88,7 @@
     mode: "0600"
     marker: "# {mark} CIS kubelet hardening"
     block: |
+      protect-kernel-defaults: true
       kubelet-arg:
         - "protect-kernel-defaults=true"
         - "tls-cert-file=/var/lib/rancher/k3s/agent/serving-kubelet.crt"
