@@ -31,17 +31,17 @@ spec:
       rules:
         - alert: FalcoCriticalEvent
           expr: |
-            increase(falcosidekick_inputs_falco_events_total{priority=~"critical|emergency|alert"}[5m]) > 0
+            increase(falcosecurity_falcosidekick_falco_events_total{priority_raw=~"critical|emergency|alert"}[5m]) > 0
           for: 0m
           labels:
             severity: critical
           annotations:
             summary: "Falco — événement critique détecté"
-            description: "Priorité {{ $labels.priority }} — règle {{ $labels.rule }}."
+            description: "Priorité {{ $labels.priority_raw }} — règle {{ $labels.rule }}."
 
         - alert: FalcoHighVolumeWarnings
           expr: |
-            increase(falcosidekick_inputs_falco_events_total{priority="warning"}[10m]) > 20
+            increase(falcosecurity_falcosidekick_falco_events_total{priority_raw="warning"}[10m]) > 20
           for: 5m
           labels:
             severity: warning
@@ -51,7 +51,7 @@ spec:
 
         - alert: FalcoSilenced
           expr: |
-            increase(falcosidekick_inputs_falco_events_total[15m]) == 0
+            increase(falcosecurity_falcosidekick_falco_events_total[15m]) == 0
           for: 15m
           labels:
             severity: warning

@@ -122,7 +122,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "count_over_time({app=\"falco\"}[6h])",
+              "expr": "count_over_time({app=\"falcosidekick\"}[6h])",
               "refId": "A"
             }
           ]
@@ -147,7 +147,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "count_over_time({app=\"falco\"} |~ \"critical|emergency\" [6h])",
+              "expr": "count_over_time({app=\"falcosidekick\"} |~ \"critical|emergency\" [6h])",
               "refId": "A"
             }
           ]
@@ -173,7 +173,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "count_over_time({app=\"falco\"} |~ \"warning|error\" [6h])",
+              "expr": "count_over_time({app=\"falcosidekick\"} |~ \"warning|error\" [6h])",
               "refId": "A"
             }
           ]
@@ -187,7 +187,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "sum by (priority) (count_over_time({app=\"falco\"} | json | __error__=\"\" [5m]))",
+              "expr": "sum by (priority) (count_over_time({app=\"falcosidekick\"} | json | __error__=\"\" [5m]))",
               "legendFormat": "{{priority}}",
               "refId": "A"
             }
@@ -201,7 +201,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "topk(10, sum by (rule) (count_over_time({app=\"falco\"} | json | __error__=\"\" [6h])))",
+              "expr": "topk(10, sum by (rule) (count_over_time({app=\"falcosidekick\"} | json | __error__=\"\" [6h])))",
               "legendFormat": "{{rule}}",
               "refId": "A"
             }
@@ -215,7 +215,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "topk(10, sum by (k8s_ns_name) (count_over_time({app=\"falco\"} | json | __error__=\"\" [6h])))",
+              "expr": "topk(10, sum by (k8s_ns_name) (count_over_time({app=\"falcosidekick\"} | json | __error__=\"\" [6h])))",
               "legendFormat": "{{k8s_ns_name}}",
               "refId": "A"
             }
@@ -237,7 +237,7 @@ data:
           "targets": [
             {
               "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-              "expr": "{app=\"falco\"} | json | priority=~\"$priority\"",
+              "expr": "{app=\"falcosidekick\"} | json | priority=~\"$priority\"",
               "refId": "A"
             }
           ]
