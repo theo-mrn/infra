@@ -10,19 +10,24 @@
     kube_bench_results: /var/log/kube-bench-results.txt
 
   tasks:
-    - name: Download kube-bench binary
+    - name: Download kube-bench archive
       ansible.builtin.get_url:
         url: "https://github.com/aquasecurity/kube-bench/releases/download/v{{ kube_bench_version }}/kube-bench_{{ kube_bench_version }}_linux_amd64.tar.gz"
         dest: /tmp/kube-bench.tar.gz
         mode: "0644"
 
-    - name: Extract kube-bench
+    - name: Extract kube-bench binary and cfg
       ansible.builtin.unarchive:
         src: /tmp/kube-bench.tar.gz
         dest: /usr/local/bin/
         remote_src: true
-        include:
-          - kube-bench
+
+    - name: Move cfg directory to /etc/kube-bench
+      ansible.builtin.shell: |
+        mkdir -p /etc/kube-bench
+        cp -r /usr/local/bin/cfg /etc/kube-bench/
+      args:
+        creates: /etc/kube-bench/cfg
 
     - name: Run kube-bench audit
       ansible.builtin.shell: |

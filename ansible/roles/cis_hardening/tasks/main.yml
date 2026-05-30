@@ -93,5 +93,8 @@
         - "protect-kernel-defaults=true"
         - "tls-cert-file=/var/lib/rancher/k3s/agent/serving-kubelet.crt"
         - "tls-private-key-file=/var/lib/rancher/k3s/agent/serving-kubelet.key"
+        - "anonymous-auth=false"
+        - "authorization-mode=Webhook"
+        - "client-ca-file=/var/lib/rancher/k3s/agent/client-ca.crt"
   notify: restart k3s
   when: kubelet_tls_cert.stat.exists
