@@ -44,6 +44,14 @@
   ignore_errors: true
 
 # 4.2.6 - protect-kernel-defaults
+- name: Ensure /etc/rancher/k3s exists on all nodes
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
 - name: Set kernel defaults for kubelet (4.2.6)
   ansible.builtin.sysctl:
     name: "{{ item.key }}"
@@ -57,36 +65,24 @@
     - { key: "kernel.panic", value: "10" }
     - { key: "kernel.panic_on_oops", value: "1" }
 
-- name: Configure kubelet protect-kernel-defaults (4.2.6)
-  ansible.builtin.copy:
-    dest: /etc/rancher/k3s/kubelet-config.yaml
-    owner: root
-    group: root
-    mode: "0600"
-    content: |
-      apiVersion: kubelet.config.k8s.io/v1beta1
-      kind: KubeletConfiguration
-      protectKernelDefaults: true
-  notify: restart k3s
-
-# 4.2.10 - kubelet TLS cert/key
+# 4.2.6 + 4.2.10 - kubelet args via k3s config.yaml
 - name: Check if kubelet TLS certs exist (4.2.10)
   ansible.builtin.stat:
     path: /var/lib/rancher/k3s/agent/serving-kubelet.crt
   register: kubelet_tls_cert
 
-- name: Configure kubelet TLS in k3s config (4.2.10)
+- name: Configure kubelet args in k3s config (4.2.6 + 4.2.10)
   ansible.builtin.blockinfile:
     path: /etc/rancher/k3s/config.yaml
     create: true
     owner: root
     group: root
     mode: "0600"
-    marker: "# {mark} CIS 4.2.10 kubelet TLS"
+    marker: "# {mark} CIS kubelet hardening"
     block: |
       kubelet-arg:
+        - "protect-kernel-defaults=true"
         - "tls-cert-file=/var/lib/rancher/k3s/agent/serving-kubelet.crt"
         - "tls-private-key-file=/var/lib/rancher/k3s/agent/serving-kubelet.key"
-        - "protect-kernel-defaults=true"
   notify: restart k3s
   when: kubelet_tls_cert.stat.exists
