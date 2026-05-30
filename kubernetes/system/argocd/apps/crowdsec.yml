@@ -67,9 +67,7 @@ spec:
       valuesObject:
         bouncer:
           crowdsec_lapi_url: http://crowdsec-service.crowdsec.svc.cluster.local:8080
-          crowdsec_lapi_key_secret:
-            name: crowdsec-bouncer-secret
-            key: api-key
+          crowdsec_bouncer_api_key: "3kJOw/5jGYetE+RdQxCHtrZcc5NecvW+Dm29i8oCWxw"
           mode: stream
           update_frequency: 15s
           ban_response_code: 403
