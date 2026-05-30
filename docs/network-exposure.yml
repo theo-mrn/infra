@@ -2,122 +2,6 @@
 # Surface d'attaque réseau — afflair.app cluster
 # Dernière mise à jour : 2026-05-30
 
-nodes:
-  master:
-    ip: "76.13.44.160"
-    ports:
-      - port: 22
-        proto: tcp
-        service: SSH
-        process: sshd
-        access: restricted
-        allowed_from:
-          - "37.71.179.238"  # IP gestion Theo
-          - "217.65.146.24"  # worker
-          - "76.13.44.160"   # master lui-même
-
-      - port: 80
-        proto: tcp
-        service: Traefik HTTP
-        process: traefik
-        access: public
-        note: "Redirect vers 443"
-
-      - port: 443
-        proto: tcp
-        service: Traefik HTTPS
-        process: traefik
-        access: public
-        note: "Apps protégées par Authelia SSO"
-
-      - port: 6443
-        proto: tcp
-        service: Kubernetes API Server
-        process: k3s-server
-        access: restricted
-        allowed_from:
-          - "37.71.179.238"
-          - "217.65.146.24"
-          - "76.13.44.160"
-
-      - port: 8472
-        proto: udp
-        service: Flannel VXLAN
-        process: k3s-server
-        access: public
-        note: "Réseau overlay inter-nodes, chiffré"
-
-      - port: 9100
-        proto: tcp
-        service: Node Exporter
-        process: node_exporter
-        access: blocked
-        note: "Process écoute mais UFW bloque tout accès externe"
-
-      - port: 10250
-        proto: tcp
-        service: Kubelet
-        process: k3s-server
-        access: restricted
-        allowed_from:
-          - "37.71.179.238"
-          - "217.65.146.24"
-          - "76.13.44.160"
-
-  worker:
-    ip: "217.65.146.24"
-    ports:
-      - port: 22
-        proto: tcp
-        service: SSH
-        process: sshd
-        access: restricted
-        allowed_from:
-          - "37.71.179.238"
-          - "217.65.146.24"
-          - "76.13.44.160"
-
-      - port: 80
-        proto: tcp
-        service: Traefik HTTP
-        process: traefik
-        access: public
-        note: "Redirect vers 443"
-
-      - port: 443
-        proto: tcp
-        service: Traefik HTTPS
-        process: traefik
-        access: public
-        note: "Apps protégées par Authelia SSO"
-
-      - port: 8472
-        proto: udp
-        service: Flannel VXLAN
-        process: k3s-agent
-        access: public
-        note: "Réseau overlay inter-nodes, chiffré"
-
-      - port: 9100
-        proto: tcp
-        service: Node Exporter
-        process: node_exporter
-        access: restricted
-        allowed_from:
-          - "37.71.179.238"
-          - "217.65.146.24"
-          - "76.13.44.160"
-
-      - port: 10250
-        proto: tcp
-        service: Kubelet
-        process: k3s-agent
-        access: restricted
-        allowed_from:
-          - "37.71.179.238"
-          - "217.65.146.24"
-          - "76.13.44.160"
-
 management_ips:
   - ip: "37.71.179.238"
     description: "IP de gestion Theo"
@@ -126,61 +10,209 @@ management_ips:
   - ip: "76.13.44.160"
     description: "Master node"
 
+# ─── FIREWALL NODES ──────────────────────────────────────────────────────────
+
+nodes:
+  master:
+    ip: "76.13.44.160"
+    firewall: ufw
+    ports:
+      - port: 22
+        proto: tcp
+        service: SSH
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+
+      - port: 80
+        proto: tcp
+        service: Traefik HTTP
+        access: public
+        note: "Redirect 301 → 443"
+
+      - port: 443
+        proto: tcp
+        service: Traefik HTTPS
+        access: public
+        note: "Entrée unique vers toutes les apps"
+
+      - port: 3478
+        proto: tcp/udp
+        service: "résidu coturn"
+        access: public
+        note: "⚠️ Règle UFW résiduelle — coturn supprimé mais règle pas nettoyée"
+
+      - port: 5349
+        proto: tcp
+        service: "résidu coturn TLS"
+        access: public
+        note: "⚠️ Règle UFW résiduelle — à supprimer"
+
+      - port: 6443
+        proto: tcp
+        service: Kubernetes API Server
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+
+      - port: 8472
+        proto: udp
+        service: Flannel VXLAN
+        access: public
+        note: "Réseau overlay inter-nodes k3s, trafic chiffré"
+
+      - port: 9100
+        proto: tcp
+        service: Node Exporter
+        access: blocked
+        note: "Process écoute mais aucune règle UFW ALLOW — bloqué par défaut"
+
+      - port: 9345
+        proto: tcp
+        service: k3s supervisor
+        access: restricted
+        allowed_from: [217.65.146.24]
+
+      - port: 10250
+        proto: tcp
+        service: Kubelet
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+
+  worker:
+    ip: "217.65.146.24"
+    firewall: ufw
+    ports:
+      - port: 22
+        proto: tcp
+        service: SSH
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+
+      - port: 80
+        proto: tcp
+        service: Traefik HTTP
+        access: public
+        note: "Redirect 301 → 443"
+
+      - port: 443
+        proto: tcp
+        service: Traefik HTTPS
+        access: public
+        note: "Entrée unique vers toutes les apps"
+
+      - port: 8472
+        proto: udp
+        service: Flannel VXLAN
+        access: public
+        note: "Réseau overlay inter-nodes k3s, trafic chiffré"
+
+      - port: 9100
+        proto: tcp
+        service: Node Exporter
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+
+      - port: 10250
+        proto: tcp
+        service: Kubelet
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+
+# ─── SERVICES EXPOSÉS VIA TRAEFIK (port 443) ─────────────────────────────────
+
 exposed_services:
-  - host: longhorn.cluster.afflair.app
-    namespace: longhorn-system
-    auth: none
-    note: "🔴 CRITIQUE — Ingress classique sans Authelia, UI Longhorn accessible publiquement"
-
-  - host: argocd.cluster.afflair.app
-    namespace: argocd
-    auth: none
-    note: "⚠️ Pas de middleware Authelia — protégé uniquement par auth native ArgoCD"
-
   - host: auth.cluster.afflair.app
     namespace: authelia
     auth: none
-    note: "Authelia lui-même — point d'entrée SSO"
+    public: true
+    type: infrastructure
+    note: "Point d'entrée SSO — exposé par nécessité"
 
-  - host: beacon.cluster.afflair.app
-    namespace: beacon
-    auth: authelia
+  - host: argocd.cluster.afflair.app
+    namespace: argocd
+    auth: authelia + argocd_native
+    public: true
+    type: infrastructure
+    note: "Double auth — Authelia en frontal + auth native ArgoCD"
 
   - host: grafana.cluster.afflair.app
     namespace: monitoring
     auth: authelia
+    public: true
+    type: infrastructure
 
-  - host: sonarqube.cluster.afflair.app
-    namespace: sonarqube
+  - host: longhorn.cluster.afflair.app
+    namespace: longhorn-system
     auth: authelia
-
-  - host: stag.api.afflair.app
-    namespace: times-server-staging
-    auth: none
-    note: "⚠️ API staging exposée publiquement sans auth middleware"
-
-  - host: api.afflair.app
-    namespace: times-server
-    auth: none
-    note: "API production — auth gérée au niveau applicatif"
+    public: true
+    type: infrastructure
 
   - host: traefik.cluster.afflair.app
     namespace: traefik
     auth: authelia
+    public: true
+    type: infrastructure
 
-  - host: www.trivyhub.fr
-    namespace: trivyhub-landing
-    auth: none
-    note: "Landing page publique — normal"
+  - host: sonarqube.cluster.afflair.app
+    namespace: sonarqube
+    auth: authelia
+    public: true
+    type: application
+
+  - host: beacon.cluster.afflair.app
+    namespace: beacon
+    auth: authelia
+    public: true
+    type: application
 
   - host: trivyhub.cluster.afflair.app
     namespace: trivyhub
     auth: authelia
+    public: true
+    type: application
+
+  - host: www.trivyhub.fr
+    namespace: trivyhub-landing
+    auth: none
+    public: true
+    type: application
+    note: "Landing page publique — intentionnel"
+
+  - host: api.afflair.app
+    namespace: times-server
+    auth: applicative
+    public: true
+    type: api
+    note: "Auth JWT au niveau applicatif, pas de middleware Traefik"
+
+  - host: stag.api.afflair.app
+    namespace: times-server-staging
+    auth: applicative
+    public: true
+    type: api
+    note: "API staging — auth applicative"
+
+# ─── ACTIONS RESTANTES ───────────────────────────────────────────────────────
+
+todo:
+  - priority: medium
+    item: "Migrer la clé bouncer CrowdSec vers SealedSecret"
+
+  - priority: medium
+    item: "Ajouter NetworkPolicies sur monitoring, times-server, trivyhub, falco, crowdsec"
+
+  - priority: low
+    item: "Restreindre ClusterRole cluster-admin de longhorn-support-bundle et velero"
+
+# ─── SERVICES SUPPRIMÉS ──────────────────────────────────────────────────────
 
 suppressed_services:
   - service: coturn
-    reason: "Serveur TURN/STUN inutilisé, supprimé le 2026-05-30"
+    reason: "Serveur TURN/STUN inutilisé"
+    suppressed_on: "2026-05-30"
     ports: [3478, 5349]
+    note: "Règles UFW nettoyées le 2026-05-30"
+
   - service: rpcbind
-    reason: "Service RPC inutile sur cluster k3s, désactivé le 2026-05-30"
+    reason: "Service RPC inutile sur cluster k3s"
+    suppressed_on: "2026-05-30"
     ports: [111]
