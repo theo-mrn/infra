@@ -78,18 +78,31 @@ spec:
           config:
             global:
               resolve_timeout: 5m
+            inhibit_rules:
+              - source_matchers:
+                  - severity = critical
+                target_matchers:
+                  - severity = warning
+                equal: [alertname]
             route:
               group_by: ["alertname", "severity"]
-              group_wait: 30s
-              group_interval: 5m
-              repeat_interval: 12h
+              group_wait: 1m
+              group_interval: 10m
+              repeat_interval: 24h
               receiver: discord
               routes:
                 - matchers:
-                    - severity = critical
+                    - alertname = Watchdog
+                  receiver: blackhole
+                - matchers:
+                    - alertname = InfoInhibitor
+                  receiver: blackhole
+                - matchers:
+                    - alertname =~ "KubeCPUOvercommit|TargetDown"
                   receiver: discord
-                  repeat_interval: 1h
+                  repeat_interval: 24h
             receivers:
+              - name: blackhole
               - name: discord
                 discord_configs:
                   - webhook_url: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
