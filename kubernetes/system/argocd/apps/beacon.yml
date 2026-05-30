@@ -15,10 +15,13 @@ spec:
           enabled: true
           host: beacon.cluster.afflair.app
           tls: true
-        wazuh:
-          indexerURL: "https://indexer.wazuh.svc.cluster.local:9200"
-          user: "admin"
-          password: "SecretPassword"
+        trivy:
+          dashboardURL: "https://trivyhub.cluster.afflair.app"
+        crowdsec:
+          lapiURL: "http://crowdsec-service.crowdsec.svc.cluster.local:8080"
+          apiKey: "3kJOw/5jGYetE+RdQxCHtrZcc5NecvW+Dm29i8oCWxw"
+        loki:
+          url: "http://loki.monitoring.svc.cluster.local:3100"
   destination:
     server: https://kubernetes.default.svc
     namespace: beacon
