@@ -1,0 +1,55 @@
+---
+# Usage: ansible-playbook playbooks/05-firewall-hardening.yml --ask-vault-pass
+# Restreint les ports sensibles aux IPs de gestion uniquement
+- name: Firewall hardening - restrict sensitive ports
+  hosts: masters
+  become: true
+  vars:
+    management_ips:
+      - "37.71.179.238"  # IP de gestion Theo
+      - "217.65.146.24"  # worker
+
+  tasks:
+    - name: Remove public 6443 rule
+      community.general.ufw:
+        rule: allow
+        port: "6443"
+        proto: tcp
+        delete: true
+
+    - name: Allow 6443 from management IPs only
+      community.general.ufw:
+        rule: allow
+        port: "6443"
+        proto: tcp
+        src: "{{ item }}"
+      loop: "{{ management_ips }}"
+
+    - name: Remove public 10250 rule (if exists)
+      community.general.ufw:
+        rule: allow
+        port: "10250"
+        proto: tcp
+        delete: true
+      ignore_errors: true
+
+    - name: Allow 10250 from management IPs only
+      community.general.ufw:
+        rule: allow
+        port: "10250"
+        proto: tcp
+        src: "{{ item }}"
+      loop: "{{ management_ips }}"
+
+    - name: Reload UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Show UFW status
+      ansible.builtin.command: ufw status numbered
+      register: ufw_status
+      changed_when: false
+
+    - name: Print UFW status
+      ansible.builtin.debug:
+        msg: "{{ ufw_status.stdout_lines }}"
