@@ -97,6 +97,12 @@ spec:
                 - name: machine-id
                   mountPath: /etc/machine-id
                   readOnly: true
+                - name: usr-bin-journalctl
+                  mountPath: /usr/bin/journalctl
+                  readOnly: true
+                - name: usr-lib-systemd
+                  mountPath: /usr/lib/systemd
+                  readOnly: true
           volumes:
             - name: var-lib-etcd
               hostPath:
@@ -137,3 +143,9 @@ spec:
             - name: machine-id
               hostPath:
                 path: /etc/machine-id
+            - name: usr-bin-journalctl
+              hostPath:
+                path: /usr/bin/journalctl
+            - name: usr-lib-systemd
+              hostPath:
+                path: /usr/lib/systemd
