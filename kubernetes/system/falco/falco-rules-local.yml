@@ -17,11 +17,13 @@ data:
             - [Thread-2, ""]
             - [Thread-3, ""]
 
-    # Whitelist falcosidekick reading sensitive files
+    # Whitelist known trusted processes reading sensitive files
     - rule: Read sensitive file untrusted
       append: true
       exceptions:
-        - name: falcosidekick_reads
-          fields: [container.image.repository]
+        - name: trusted_sensitive_file_readers
+          fields: [proc.exepath, container.id]
           values:
-            - [falcosecurity/falcosidekick]
+            - [/usr/lib/systemd/systemd-executor, host]
+            - [/usr/bin/systemd-executor, host]
+            - [/lib/systemd/systemd-executor, host]
