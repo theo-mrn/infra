@@ -43,6 +43,17 @@ spec:
           - effect: NoSchedule
             key: node-role.kubernetes.io/control-plane
             operator: Exists
+
+        extraVolumes:
+          - name: rules-local
+            configMap:
+              name: falco-rules-local
+
+        extraVolumeMounts:
+          - name: rules-local
+            mountPath: /etc/falco/falco_rules.local.yaml
+            subPath: falco_rules.local.yaml
+            readOnly: true
   destination:
     server: https://kubernetes.default.svc
     namespace: falco
