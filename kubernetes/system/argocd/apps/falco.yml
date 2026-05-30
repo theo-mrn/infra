@@ -44,16 +44,28 @@ spec:
             key: node-role.kubernetes.io/control-plane
             operator: Exists
 
-        extraVolumes:
-          - name: rules-local
-            configMap:
-              name: falco-rules-local
+        customRules:
+          falco_rules.local.yaml: |-
+            - rule: Contact K8S API Server From Container
+              append: true
+              exceptions:
+                - name: known_k8s_api_callers
+                  fields: [proc.name, container.image.repository]
+                  values:
+                    - [argocd-applicat, quay.io/argoproj/argocd]
+                    - [python, ""]
+                    - [Thread-2, ""]
+                    - [Thread-3, ""]
 
-        extraVolumeMounts:
-          - name: rules-local
-            mountPath: /etc/falco/falco_rules.local.yaml
-            subPath: falco_rules.local.yaml
-            readOnly: true
+            - rule: Read sensitive file untrusted
+              append: true
+              exceptions:
+                - name: trusted_sensitive_file_readers
+                  fields: [proc.exepath, container.id]
+                  values:
+                    - [/usr/lib/systemd/systemd-executor, host]
+                    - [/usr/bin/systemd-executor, host]
+                    - [/lib/systemd/systemd-executor, host]
   destination:
     server: https://kubernetes.default.svc
     namespace: falco
