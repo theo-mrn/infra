@@ -9,6 +9,9 @@ spec:
   routes:
     - match: Host(`argocd.cluster.afflair.app`)
       kind: Rule
+      middlewares:
+        - name: authelia
+          namespace: authelia
       services:
         - name: argocd-server
           port: 80
