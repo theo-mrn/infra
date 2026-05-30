@@ -1,4 +1,23 @@
 apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: falcosidekick
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - falco
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: falcosidekick
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: falco-alerts
@@ -7,35 +26,35 @@ metadata:
     release: kube-prometheus-stack
 spec:
   groups:
-    - name: falco.critical
+    - name: falco.alerts
       interval: 1m
       rules:
         - alert: FalcoCriticalEvent
           expr: |
-            sum(count_over_time({app="falco"} | json | priority=~"critical|emergency|alert" [5m])) > 0
+            increase(falcosidekick_inputs_falco_events_total{priority=~"critical|emergency|alert"}[5m]) > 0
           for: 0m
           labels:
             severity: critical
           annotations:
             summary: "Falco — événement critique détecté"
-            description: "Un événement de priorité critical/emergency/alert a été détecté dans le cluster. Vérifier le dashboard Falco dans Grafana."
+            description: "Priorité {{ $labels.priority }} — règle {{ $labels.rule }}."
 
         - alert: FalcoHighVolumeWarnings
           expr: |
-            sum(count_over_time({app="falco"} | json | priority="warning" [10m])) > 20
+            increase(falcosidekick_inputs_falco_events_total{priority="warning"}[10m]) > 20
           for: 5m
           labels:
             severity: warning
           annotations:
             summary: "Falco — volume élevé d'avertissements"
-            description: "Plus de 20 événements warning Falco en 10 minutes. Possible attaque ou misconfiguration."
+            description: "Plus de 20 warnings Falco en 10 minutes."
 
         - alert: FalcoSilenced
           expr: |
-            sum(count_over_time({app="falco"} [15m])) == 0
+            increase(falcosidekick_inputs_falco_events_total[15m]) == 0
           for: 15m
           labels:
             severity: warning
           annotations:
             summary: "Falco — aucun événement reçu"
-            description: "Falco n'envoie plus d'événements depuis 15 minutes. Le service est peut-être arrêté."
+            description: "Falco n'envoie plus d'événements depuis 15 minutes."
