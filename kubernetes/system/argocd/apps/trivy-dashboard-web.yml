@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/trivyhub/trivy-dashboard-web
+    repoURL: https://github.com/trivyhub/trivyhub
     targetRevision: gitops/prod
     path: helm/trivyhub
     helm:
@@ -30,7 +30,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/trivyhub/trivy-dashboard-web
+    repoURL: https://github.com/trivyhub/trivyhub
     targetRevision: gitops/staging
     path: helm/trivyhub
     helm:
