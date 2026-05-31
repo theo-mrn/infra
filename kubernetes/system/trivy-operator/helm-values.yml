@@ -8,3 +8,10 @@ operator:
   rbacAssessmentScannerEnabled: true
   infraAssessmentScannerEnabled: true
   clusterComplianceEnabled: false
+  metricsVulnIdEnabled: true
+
+serviceMonitor:
+  enabled: true
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack

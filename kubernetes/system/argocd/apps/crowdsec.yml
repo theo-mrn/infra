@@ -69,7 +69,9 @@ spec:
     helm:
       valuesObject:
         bouncer:
-          crowdsec_bouncer_api_key: "3kJOw/5jGYetE+RdQxCHtrZcc5NecvW+Dm29i8oCWxw"
+          crowdsec_bouncer_api_key_secret:
+            name: crowdsec-bouncer-key
+            key: api-key
           crowdsec_agent_host: "crowdsec-service.crowdsec.svc.cluster.local:8080"
   destination:
     server: https://kubernetes.default.svc

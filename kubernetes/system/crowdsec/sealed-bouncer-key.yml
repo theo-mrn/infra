@@ -1,0 +1,12 @@
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: crowdsec-bouncer-key
+  namespace: crowdsec
+spec:
+  encryptedData:
+    api-key: AgCs7gpKqqggY2yOfgt/WtB5ZeHGISGdYx3xMERt4FZc+l9+TGn6X5B1bQaaSVEQP7ZndzfKRtYluOT4GkonjAQD9XrySKIE4lYB1YyAJza/JLApBrpIiLoD1NHKkYdKU6Bz9suzQ9tlDPKMV63DF9oMdjr5nnf5xCo82z7mGKlsYQYNmQY34jKf6DJgJPZFhzbPHvhL/sgLEvkIndv/LmZbKj5Mh8Vtk79FAjZRvhgmrSxmPm7Qr6yadJ/Yt6Gv9Ll0o+8llVpP3oyCxtkejA3g+EpZbSY0I1IIp9hCYI+9BX2d+tgXEMuAQRo+ZvUl0gS68YMj714otUTYsmNCkWuN6SajbnjdrAjXIxYe1f6M2uA8a1jd4roVgKAvukZH42bMdbM4d8kJF6hVpVQ9dLpD4BEqjg8jeN283t6GKbukW2cQ+z87X+Wm16wKI7+0wJX4M+AC2E90rZnQOqxuPCX1uMaDfa3pZ2ahWtBi0tODbsmR7u0y3j1y7S+g6payS+pH/m5RlJwgutJgwvnK0bSQWzFC7sccGovuXHsXo8x4EJdpR1ERm7sbKKXwaiwBeJKyAnh+6HgErI3BHUywPjiikQcnTDogWFGgb8LRYOakffH+PnoBuYIC1ytsRmJ2Z4EHDvFMnjWHRqonT3AA22DL5vTYgohco6OUrpoUU+xutgwcTaqJEKKuZDi0ZsqR6QZD8OMYcFAWcWfl58nnh8x9UWMqxgDUhGWwdMdM2VvV+JytWw3V5hRDBsYK
+  template:
+    metadata:
+      name: crowdsec-bouncer-key
+      namespace: crowdsec

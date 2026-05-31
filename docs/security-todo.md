@@ -24,26 +24,6 @@
 
 ---
 
-## 🟡 Priorité normale — Backup et continuité
-
----
-
-## 🟡 Priorité normale — Observabilité
-
-### 5. Pas d'alerte sur les CVEs Trivy
-- **Problème :** Trivy Operator scanne les images mais aucune alerte n'est configurée
-- **Risque :** Des vulnérabilités critiques peuvent passer inaperçues
-- **Solution :** Créer des PrometheusRules sur les métriques Trivy pour alerter sur les CVEs CRITICAL
-
-### 6. Résultats kube-bench non centralisés
-- **Problème :** Résultats sauvegardés localement (`/tmp/` et `/var/log/`)
-- **Solution :** Archiver dans Loki ou dans le repo
-
-### 7. Pas d'alerte sur les dégradations ArgoCD
-- **Problème :** Si une Application ArgoCD passe en `OutOfSync` ou `Degraded`, aucune notification
-- **Solution :** Configurer ArgoCD Notifications vers Discord
-
----
 
 ## ✅ Réglé aujourd'hui (31 mai 2026)
 
@@ -54,6 +34,9 @@
 | `velero-server` cluster-admin | Role minimal backup/restore |
 | multipath-tools | Supprimé — causait les bugs Longhorn |
 | Bug Longhorn mount fantôme | Fix Ansible — umount globalmounts orphelins avant k3s |
+| Alertes dégradations ArgoCD | ArgoCD Notifications configuré → Discord (15 apps) |
+| Alertes CVE Trivy | ServiceMonitor + PrometheusRules CRITICAL/HIGH |
+| Résultats kube-bench | Push vers Loki après chaque audit |
 | fail2ban | Supprimé — remplacé par CrowdSec |
 | modemmanager, caddy, fwupd, udisks2, apport, pollinate | Supprimés |
 | CPUThrottlingHigh spam Discord | Silencé dans Alertmanager |

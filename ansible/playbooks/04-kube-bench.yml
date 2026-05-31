@@ -44,3 +44,14 @@
         src: "{{ kube_bench_results }}"
         dest: "/tmp/kube-bench-{{ inventory_hostname }}.txt"
         flat: true
+
+    - name: Push results to Loki
+      ansible.builtin.shell: |
+        TIMESTAMP=$(date +%s)000000000
+        SUMMARY=$(grep -E "checks PASS|checks FAIL|checks WARN" {{ kube_bench_results }} | tail -4 | tr '\n' ' ')
+        curl -s -X POST "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push" \
+          -H "Content-Type: application/json" \
+          -d "{\"streams\":[{\"stream\":{\"app\":\"kube-bench\",\"node\":\"{{ inventory_hostname }}\"},\"values\":[[\"${TIMESTAMP}\",\"${SUMMARY}\"]]}]}" \
+          && echo "Loki push OK" || echo "Loki push FAILED (cluster unreachable from node)"
+      changed_when: false
+      ignore_errors: true
