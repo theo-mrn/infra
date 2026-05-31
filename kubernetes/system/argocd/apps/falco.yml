@@ -27,6 +27,13 @@ spec:
             - /etc/falco/falco_rules.yaml
             - /etc/falco/falco_rules.local.yaml
             - /etc/falco/rules.d
+          syscall_event_drops:
+            actions:
+              - log
+              - drop
+            rate: 0.03333
+            max_burst: 10
+          syscall_buf_size_preset: 4
         falcosidekick:
           enabled: true
           config:
