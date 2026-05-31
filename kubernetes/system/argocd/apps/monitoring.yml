@@ -66,6 +66,10 @@ spec:
           prometheusSpec:
             retention: 7d
             readinessProbeInitialDelay: 180
+            readinessProbeTimeoutSeconds: 10
+            livenessProbeInitialDelay: 180
+            livenessProbeTimeoutSeconds: 10
+            livenessProbeFailureThreshold: 6
             storageSpec:
               volumeClaimTemplate:
                 spec:
