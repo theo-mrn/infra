@@ -64,7 +64,8 @@ spec:
             custom: grafana-dashboards-custom
         prometheus:
           prometheusSpec:
-            retention: 15d
+            retention: 7d
+            readinessProbeInitialDelay: 180
             storageSpec:
               volumeClaimTemplate:
                 spec:
