@@ -98,6 +98,9 @@ spec:
                     - alertname = InfoInhibitor
                   receiver: blackhole
                 - matchers:
+                    - alertname = CPUThrottlingHigh
+                  receiver: blackhole
+                - matchers:
                     - alertname =~ "KubeCPUOvercommit|TargetDown"
                   receiver: discord
                   repeat_interval: 24h
