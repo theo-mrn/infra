@@ -1,0 +1,31 @@
+---
+# Usage: ansible-playbook playbooks/05-lynis.yml --ask-vault-pass
+# Lance un audit Lynis directement sur les nodes
+- name: Run Lynis CIS audit on all nodes
+  hosts: all
+  become: true
+  vars:
+    lynis_results: /var/log/lynis-results.txt
+
+  tasks:
+    - name: Install Lynis
+      ansible.builtin.apt:
+        name: lynis
+        state: present
+        update_cache: true
+
+    - name: Run Lynis audit
+      ansible.builtin.shell: |
+        lynis audit system --no-colors --quiet 2>&1 | tee {{ lynis_results }}
+      register: lynis_output
+      changed_when: false
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg: "{{ lynis_output.stdout_lines | select('match', '.*Hardening index.*|.*Warning.*|.*Suggestion.*') | list }}"
+
+    - name: Save results locally
+      ansible.builtin.fetch:
+        src: "{{ lynis_results }}"
+        dest: "/tmp/lynis-{{ inventory_hostname }}.txt"
+        flat: true
