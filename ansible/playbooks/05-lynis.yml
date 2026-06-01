@@ -16,13 +16,13 @@
 
     - name: Run Lynis audit
       ansible.builtin.shell: |
-        lynis audit system --no-colors --quiet 2>&1 | tee {{ lynis_results }}
+        lynis audit system --no-colors 2>&1 | tee {{ lynis_results }}
       register: lynis_output
       changed_when: false
 
     - name: Show summary
       ansible.builtin.debug:
-        msg: "{{ lynis_output.stdout_lines | select('match', '.*Hardening index.*|.*Warning.*|.*Suggestion.*') | list }}"
+        msg: "{{ lynis_output.stdout_lines | select('match', '.*Hardening index.*|.*Warning.*|.*Suggestion.*|.*Tests performed.*') | list }}"
 
     - name: Save results locally
       ansible.builtin.fetch:

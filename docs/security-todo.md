@@ -5,11 +5,10 @@
 
 ## 🟠 Priorité moyenne — Isolation Kubernetes
 
-### 1. Aucune NetworkPolicy sur la majorité des namespaces
-- **Namespaces concernés :** `monitoring`, `times-server`, `times-server-staging`, `trivyhub`, `falco`, `crowdsec`, `velero`, `longhorn-system`
-- **Problème :** Tout pod peut communiquer librement avec n'importe quel autre service
-- **Risque :** Un container compromis peut atteindre les bases de données, secrets, APIs internes
-- **Solution :** Définir des NetworkPolicies de type "deny all + allow explicit" par namespace
+### 1. NetworkPolicies — namespaces infrastructure restants
+- **Namespaces couverts ✅ :** `times-server`, `times-server-staging`, `trivyhub`
+- **Namespaces restants :** `monitoring`, `falco`, `crowdsec`, `velero`, `longhorn-system`
+- **Note :** Les namespaces infrastructure sont plus complexes — risque de casser les communications internes
 
 ### 2. Pods privileged non audités régulièrement
 - **Pods concernés :** Falco, Longhorn (instance-manager, engine-image, csi-plugin), SonarQube init

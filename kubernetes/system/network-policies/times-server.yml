@@ -1,0 +1,99 @@
+---
+# Deny all ingress/egress par défaut
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: times-server
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# times-server app : reçoit trafic de Traefik, sort vers postgres et DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: times-server-app
+  namespace: times-server
+spec:
+  podSelector:
+    matchLabels:
+      app: times-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: times-postgres
+      ports:
+        - port: 5432
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# Postgres : reçoit de times-server et CNPG operator
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: times-postgres
+  namespace: times-server
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: times-postgres
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: times-server
+      ports:
+        - port: 5432
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - port: 5432
+        - port: 8000
+  egress:
+    # Réplication CNPG entre instances
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: times-postgres
+    # CNPG operator
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # S3 backup (WAL)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 443
