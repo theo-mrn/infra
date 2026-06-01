@@ -74,6 +74,18 @@ spec:
                     - [/usr/lib/systemd/systemd-executor, host]
                     - [/usr/bin/systemd-executor, host]
                     - [/lib/systemd/systemd-executor, host]
+
+            - rule: Clear Log Activities
+              override:
+                exceptions: append
+              exceptions:
+                - name: lynis_log_write
+                  fields: [proc.name, fd.name]
+                  values:
+                    - [lynis, /var/log/lynis.log]
+                    - [lynis, /var/log/lynis-report.dat]
+                    - [dash, /var/log/lynis.log]
+                    - [dash, /var/log/lynis-report.dat]
   destination:
     server: https://kubernetes.default.svc
     namespace: falco

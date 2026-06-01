@@ -106,6 +106,16 @@ spec:
                     - alertname = CPUThrottlingHigh
                   receiver: blackhole
                 - matchers:
+                    - alertname = NodeSystemSaturation
+                  receiver: blackhole
+                - matchers:
+                    - alertname = KubePdbNotEnoughHealthyPods
+                  receiver: blackhole
+                - matchers:
+                    - alertname =~ "KubeDeploymentReplicasMismatch|KubeDeploymentRolloutStuck|KubePodNotReady"
+                  receiver: discord
+                  repeat_interval: 24h
+                - matchers:
                     - alertname =~ "KubeCPUOvercommit|TargetDown"
                   receiver: discord
                   repeat_interval: 24h
@@ -114,6 +124,7 @@ spec:
               - name: discord
                 discord_configs:
                   - webhook_url: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
+                    send_resolved: false
                     title: '{{ template "discord.default.title" . }}'
                     message: |-
                       {{ range .Alerts }}
