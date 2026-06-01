@@ -4,3 +4,8 @@
     name: "{{ 'k3s' if inventory_hostname in groups['masters'] else 'k3s-agent' }}"
     state: restarted
     daemon_reload: true
+
+- name: restart sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted

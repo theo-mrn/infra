@@ -114,3 +114,71 @@
         - "client-ca-file=/var/lib/rancher/k3s/agent/client-ca.crt"
   notify: restart k3s
   when: kubelet_tls_cert.stat.exists
+
+# ── Lynis SSH hardening ───────────────────────────────────────────────────────
+- name: Harden SSH configuration (Lynis SSH-7408)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    backup: true
+  loop:
+    - { regexp: '^#?PermitRootLogin',       line: 'PermitRootLogin prohibit-password' }
+    - { regexp: '^#?MaxAuthTries',          line: 'MaxAuthTries 3' }
+    - { regexp: '^#?MaxSessions',           line: 'MaxSessions 2' }
+    - { regexp: '^#?LogLevel',              line: 'LogLevel VERBOSE' }
+    - { regexp: '^#?X11Forwarding',         line: 'X11Forwarding no' }
+    - { regexp: '^#?AllowAgentForwarding',  line: 'AllowAgentForwarding no' }
+    - { regexp: '^#?AllowTcpForwarding',    line: 'AllowTcpForwarding no' }
+    - { regexp: '^#?GatewayPorts',          line: 'GatewayPorts no' }
+    - { regexp: '^#?TCPKeepAlive',          line: 'TCPKeepAlive no' }
+    - { regexp: '^#?ClientAliveCountMax',   line: 'ClientAliveCountMax 2' }
+    - { regexp: '^#?ClientAliveInterval',   line: 'ClientAliveInterval 300' }
+  notify: restart sshd
+
+# ── Lynis kernel protocols (NETW-3200) ───────────────────────────────────────
+- name: Disable unused kernel network protocols
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/disable-unused-protocols.conf
+    content: |
+      install dccp /bin/true
+      install sctp /bin/true
+      install rds /bin/true
+      install tipc /bin/true
+    owner: root
+    group: root
+    mode: "0644"
+
+# ── Lynis core dumps (KRNL-5820) ─────────────────────────────────────────────
+- name: Disable core dumps
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "* hard core 0"
+    - "* soft core 0"
+
+- name: Disable core dumps via sysctl
+  ansible.builtin.sysctl:
+    name: fs.suid_dumpable
+    value: "0"
+    state: present
+    sysctl_file: /etc/sysctl.d/90-hardening.conf
+    reload: true
+
+# ── Lynis umask (AUTH-9328) ───────────────────────────────────────────────────
+- name: Set stricter umask in login.defs
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^UMASK'
+    line: 'UMASK 027'
+    state: present
+
+# ── Lynis purge old packages (PKGS-7346) ─────────────────────────────────────
+- name: Purge removed packages
+  ansible.builtin.shell: |
+    dpkg --list | grep "^rc" | awk '{print $2}' | xargs -r dpkg --purge
+  changed_when: false
+  ignore_errors: true
