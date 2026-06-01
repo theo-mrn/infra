@@ -84,8 +84,10 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+    # K8s API server + S3 backup
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
       ports:
         - port: 443
+        - port: 6443
