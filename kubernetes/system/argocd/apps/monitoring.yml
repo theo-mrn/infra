@@ -116,7 +116,10 @@ spec:
                   receiver: discord
                   repeat_interval: 24h
                 - matchers:
-                    - alertname =~ "KubeCPUOvercommit|TargetDown"
+                    - alertname = KubeCPUOvercommit
+                  receiver: blackhole
+                - matchers:
+                    - alertname = TargetDown
                   receiver: discord
                   repeat_interval: 24h
             receivers:
