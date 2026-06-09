@@ -31,7 +31,7 @@ spec:
               name: Authelia
               icon: signin
               client_id: grafana
-              client_secret: $__file{/etc/secrets/monitoring-secrets/grafana-oidc-client-secret}
+              client_secret: ${GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}
               scopes: "openid profile email groups"
               empty_scopes: false
               auth_url: https://auth.cluster.afflair.app/api/oidc/authorization
@@ -42,6 +42,12 @@ spec:
               name_attribute_path: name
               use_pkce: true
               role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
+          env:
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: monitoring-secrets
+                  key: grafana-oidc-client-secret
           extraSecretMounts:
             - name: monitoring-secrets
               secretName: monitoring-secrets
