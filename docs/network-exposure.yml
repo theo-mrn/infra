@@ -1,6 +1,5 @@
----
 # Surface d'attaque réseau — afflair.app cluster
-# Dernière mise à jour : 2026-05-30
+# Dernière mise à jour : 2026-06-09
 
 management_ips:
   - ip: "37.71.179.238"
@@ -35,18 +34,6 @@ nodes:
         access: public
         note: "Entrée unique vers toutes les apps"
 
-      - port: 3478
-        proto: tcp/udp
-        service: "résidu coturn"
-        access: public
-        note: "⚠️ Règle UFW résiduelle — coturn supprimé mais règle pas nettoyée"
-
-      - port: 5349
-        proto: tcp
-        service: "résidu coturn TLS"
-        access: public
-        note: "⚠️ Règle UFW résiduelle — à supprimer"
-
       - port: 6443
         proto: tcp
         service: Kubernetes API Server
@@ -56,7 +43,8 @@ nodes:
       - port: 8472
         proto: udp
         service: Flannel VXLAN
-        access: public
+        access: restricted
+        allowed_from: [217.65.146.24]
         note: "Réseau overlay inter-nodes k3s, trafic chiffré"
 
       - port: 9100
@@ -87,22 +75,11 @@ nodes:
         access: restricted
         allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
 
-      - port: 80
-        proto: tcp
-        service: Traefik HTTP
-        access: public
-        note: "Redirect 301 → 443"
-
-      - port: 443
-        proto: tcp
-        service: Traefik HTTPS
-        access: public
-        note: "Entrée unique vers toutes les apps"
-
       - port: 8472
         proto: udp
         service: Flannel VXLAN
-        access: public
+        access: restricted
+        allowed_from: [76.13.44.160]
         note: "Réseau overlay inter-nodes k3s, trafic chiffré"
 
       - port: 9100
@@ -136,7 +113,7 @@ exposed_services:
 
   - host: grafana.cluster.afflair.app
     namespace: monitoring
-    auth: authelia
+    auth: authelia + oidc
     public: true
     type: infrastructure
 
@@ -182,26 +159,13 @@ exposed_services:
     auth: applicative
     public: true
     type: api
-    note: "Auth JWT au niveau applicatif, pas de middleware Traefik"
+    note: "Auth JWT au niveau applicatif"
 
   - host: stag.api.afflair.app
     namespace: times-server-staging
     auth: applicative
     public: true
     type: api
-    note: "API staging — auth applicative"
-
-# ─── ACTIONS RESTANTES ───────────────────────────────────────────────────────
-
-todo:
-  - priority: medium
-    item: "Migrer la clé bouncer CrowdSec vers SealedSecret"
-
-  - priority: medium
-    item: "Ajouter NetworkPolicies sur monitoring, times-server, trivyhub, falco, crowdsec"
-
-  - priority: low
-    item: "Restreindre ClusterRole cluster-admin de longhorn-support-bundle et velero"
 
 # ─── SERVICES SUPPRIMÉS ──────────────────────────────────────────────────────
 
@@ -210,7 +174,6 @@ suppressed_services:
     reason: "Serveur TURN/STUN inutilisé"
     suppressed_on: "2026-05-30"
     ports: [3478, 5349]
-    note: "Règles UFW nettoyées le 2026-05-30"
 
   - service: rpcbind
     reason: "Service RPC inutile sur cluster k3s"

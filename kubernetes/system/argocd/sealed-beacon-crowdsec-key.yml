@@ -1,0 +1,13 @@
+# Ce fichier doit être généré avec kubeseal depuis le cluster.
+# La clé API CrowdSec pour beacon (namespace beacon) y est chiffrée.
+#
+# Pour regénérer :
+#   kubectl create secret generic beacon-crowdsec-api-key \
+#     --namespace beacon \
+#     --from-literal=api-key="VALEUR_DE_LA_CLE" \
+#     --dry-run=client -o yaml \
+#   | kubeseal --cert kubernetes/system/sealed-secrets/pub-cert.pem \
+#     --format yaml > kubernetes/system/argocd/sealed-beacon-crowdsec-key.yml
+#
+# Appliquer :
+#   kubectl apply -f kubernetes/system/argocd/sealed-beacon-crowdsec-key.yml

@@ -19,7 +19,8 @@ spec:
           dashboardURL: "https://trivyhub.cluster.afflair.app"
         crowdsec:
           lapiURL: "http://crowdsec-service.crowdsec.svc.cluster.local:8080"
-          apiKey: "3kJOw/5jGYetE+RdQxCHtrZcc5NecvW+Dm29i8oCWxw"
+          apiKeySecretName: "beacon-crowdsec-api-key"
+          apiKeySecretKey: "api-key"
         loki:
           url: "http://loki.monitoring.svc.cluster.local:3100"
   destination:
@@ -27,7 +28,7 @@ spec:
     namespace: beacon
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
