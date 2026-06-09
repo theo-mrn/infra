@@ -12,22 +12,36 @@ La clé privée sealed-secrets n'est jamais sauvegardée par Velero. Sans elle, 
 SealedSecrets du repo sont définitivement irrécupérables.
 
 ```bash
-export KUBECONFIG=./ansible/kubeconfig.yml
+export KUBECONFIG=/Users/theo/Developer/infra/ansible/kubeconfig.yml
 
-# Exporter la clé privée
-kubectl get secret -n sealed-secrets \
+# Exporter la clé privée (sealed-secrets tourne dans kube-system)
+kubectl get secrets -n kube-system \
   -l sealedsecrets.bitnami.com/sealed-secrets-key \
-  -o yaml > /tmp/sealed-secrets-master-key.yaml
+  -o yaml > ~/sealed-secrets-master-key.yaml
+```
 
-# Stocker ce fichier dans un gestionnaire de secrets hors-cluster (Bitwarden, 1Password…)
-# NE PAS committer dans git
+Le fichier contient la clé privée TLS en clair — **ne jamais committer dans git**.
+Le chiffrer avant de le stocker :
+
+```bash
+gpg --symmetric --cipher-algo AES256 ~/sealed-secrets-master-key.yaml
+rm ~/sealed-secrets-master-key.yaml
+# → ~/sealed-secrets-master-key.yaml.gpg à stocker sur iCloud, Google Drive, etc.
+```
+
+Pour vérifier que le fichier est valide :
+
+```bash
+gpg --decrypt ~/sealed-secrets-master-key.yaml.gpg | head -5
 ```
 
 Pour restaurer la clé sur un nouveau cluster :
 
 ```bash
-kubectl apply -f sealed-secrets-master-key.yaml
-kubectl rollout restart deployment -n sealed-secrets
+gpg --decrypt ~/sealed-secrets-master-key.yaml.gpg > /tmp/sealed-secrets-master-key.yaml
+kubectl apply -f /tmp/sealed-secrets-master-key.yaml
+kubectl rollout restart deployment -n kube-system -l app.kubernetes.io/name=sealed-secrets
+rm /tmp/sealed-secrets-master-key.yaml
 ```
 
 ---
