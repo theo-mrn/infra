@@ -1,0 +1,127 @@
+# Longhorn : storage distribué — communication interne complexe entre composants
+# Stratégie : autoriser les communications inter-composants Longhorn
+# et l'accès depuis les pods qui montent des volumes (tous namespaces via CSI).
+---
+# Longhorn manager : orchestration, reçoit de l'UI et du driver deployer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: longhorn-manager
+  namespace: longhorn-system
+spec:
+  podSelector:
+    matchLabels:
+      app: longhorn-manager
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Autres managers (cluster interne Longhorn)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: longhorn-manager
+      ports:
+        - port: 9500
+        - port: 9501
+        - port: 9502
+        - port: 9503
+    # CSI plugins (montage volumes)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: longhorn-csi-plugin
+      ports:
+        - port: 9500
+    # Driver deployer
+    - from:
+        - podSelector:
+            matchLabels:
+              app: longhorn-driver-deployer
+      ports:
+        - port: 9500
+    # UI
+    - from:
+        - podSelector:
+            matchLabels:
+              app: longhorn-ui
+      ports:
+        - port: 9500
+    # Prometheus scrape
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 9500
+  egress:
+    # Autres managers
+    - to:
+        - podSelector:
+            matchLabels:
+              app: longhorn-manager
+      ports:
+        - port: 9500
+        - port: 9501
+        - port: 9502
+        - port: 9503
+    # Instance managers (réplication volumes)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: longhorn-instance-manager
+    # S3 backup target
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 443
+    # K8s API
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 6443
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# Longhorn UI : reçoit trafic Traefik
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: longhorn-ui
+  namespace: longhorn-system
+spec:
+  podSelector:
+    matchLabels:
+      app: longhorn-ui
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+      ports:
+        - port: 8000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: longhorn-manager
+      ports:
+        - port: 9500
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
