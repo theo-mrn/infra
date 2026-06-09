@@ -1,6 +1,7 @@
 replicaCount: 1
 
-monitoringPasscode: "define_your_passcode"
+monitoringPasscodeSecretName: sonarqube-secrets
+monitoringPasscodeSecretKey: monitoring-passcode
 
 community:
   enabled: true
@@ -32,7 +33,8 @@ jdbcOverwrite:
   enabled: true
   jdbcUrl: "jdbc:postgresql://sonarqube-db-postgresql.sonarqube.svc.cluster.local:5432/sonarqube"
   jdbcUsername: "sonarqube"
-  jdbcPassword: "sonarqube"
+  jdbcSecretName: sonarqube-secrets
+  jdbcSecretPasswordKey: jdbc-password
 
 startupProbe:
   initialDelaySeconds: 30

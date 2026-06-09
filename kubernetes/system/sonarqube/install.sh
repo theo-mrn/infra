@@ -7,6 +7,7 @@ helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
 helm repo update
 
 kubectl apply -f "$(dirname "$0")/namespace.yml"
+kubectl apply -f "$(dirname "$0")/sealed-secrets.yml"
 
 helm upgrade --install sonarqube sonarqube/sonarqube \
   --namespace sonarqube \

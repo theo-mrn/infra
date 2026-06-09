@@ -13,7 +13,10 @@ spec:
       valuesObject:
         grafana:
           enabled: true
-          adminPassword: "CHANGE_ME"
+          admin:
+            existingSecret: monitoring-secrets
+            userKey: grafana-admin-user
+            passwordKey: grafana-admin-password
           assertNoLeakedSecrets: false
           ingress:
             enabled: false
@@ -28,7 +31,7 @@ spec:
               name: Authelia
               icon: signin
               client_id: grafana
-              client_secret: "SqNiYIrRaOt6pxwfimJoc8za4iqCS4IurSccYJ4iTWU="
+              client_secret: $__secretPath(/etc/secrets/monitoring-secrets/grafana-oidc-client-secret)
               scopes: "openid profile email groups"
               empty_scopes: false
               auth_url: https://auth.cluster.afflair.app/api/oidc/authorization
@@ -39,6 +42,12 @@ spec:
               name_attribute_path: name
               use_pkce: true
               role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
+          extraSecretMounts:
+            - name: monitoring-secrets
+              secretName: monitoring-secrets
+              defaultMode: 0440
+              mountPath: /etc/secrets/monitoring-secrets
+              readOnly: true
           persistence:
             enabled: true
             size: 5Gi
@@ -126,7 +135,7 @@ spec:
               - name: blackhole
               - name: discord
                 discord_configs:
-                  - webhook_url: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
+                  - webhook_url_file: /etc/alertmanager/secrets/monitoring-secrets/alertmanager-discord-webhook
                     send_resolved: false
                     title: '{{ template "discord.default.title" . }}'
                     message: |-
@@ -136,6 +145,8 @@ spec:
                       {{ .Annotations.description }}
                       {{ end }}
           alertmanagerSpec:
+            secrets:
+              - monitoring-secrets
             storage:
               volumeClaimTemplate:
                 spec:
