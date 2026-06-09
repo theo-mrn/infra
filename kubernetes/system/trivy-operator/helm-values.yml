@@ -1,12 +1,20 @@
 trivy:
   ignoreUnfixed: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100M
+    limits:
+      cpu: 500m
+      memory: 500M
 
 operator:
-  scanJobsConcurrentLimit: 10
+  scanJobsConcurrentLimit: 1
+  scanJobsRetryDelay: 30s
   vulnerabilityScannerEnabled: true
-  configAuditScannerEnabled: true
-  rbacAssessmentScannerEnabled: true
-  infraAssessmentScannerEnabled: true
+  configAuditScannerEnabled: false
+  rbacAssessmentScannerEnabled: false
+  infraAssessmentScannerEnabled: false
   clusterComplianceEnabled: false
   metricsVulnIdEnabled: true
 

@@ -1,6 +1,13 @@
 pod:
   replicas: 1
   kind: Deployment
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
   resources:
     requests:
       memory: 128Mi
