@@ -9,15 +9,6 @@ spec:
     includedNamespaces:
       - monitoring
       - traefik
-      - times-server
-      - times-server-staging
-      - argocd
-      - authelia
-      - crowdsec
-      - beacon
-      - trivyhub
-      - trivyhub-landing
-      - sealed-secrets
     storageLocation: aws
     ttl: 168h  # garde 7 jours de backups
     snapshotVolumes: true
