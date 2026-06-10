@@ -34,7 +34,7 @@ spec:
           persistence:
             enabled: true
             size: 10Gi
-            storageClass: longhorn
+            storageClass: local-path
         backend:
           replicas: 0
         read:

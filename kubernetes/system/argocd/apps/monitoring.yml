@@ -42,7 +42,7 @@ spec:
           persistence:
             enabled: true
             size: 5Gi
-            storageClass: longhorn
+            storageClass: local-path
             existingClaim: grafana-longhorn
           additionalDataSources:
             - name: Loki
@@ -73,7 +73,7 @@ spec:
             storageSpec:
               volumeClaimTemplate:
                 spec:
-                  storageClassName: longhorn
+                  storageClassName: local-path
                   accessModes: ["ReadWriteOnce"]
                   resources:
                     requests:
@@ -139,7 +139,7 @@ spec:
             storage:
               volumeClaimTemplate:
                 spec:
-                  storageClassName: longhorn
+                  storageClassName: local-path
                   accessModes: ["ReadWriteOnce"]
                   resources:
                     requests:

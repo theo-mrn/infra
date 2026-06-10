@@ -6,7 +6,7 @@ auth:
 master:
   persistence:
     enabled: true
-    storageClass: longhorn
+    storageClass: local-path
     size: 1Gi
   resources:
     requests:

@@ -43,7 +43,7 @@ logs:
 persistence:
   enabled: true
   size: 128Mi
-  storageClass: longhorn
+  storageClass: local-path
   existingClaim: traefik-longhorn
 
 tolerations:
