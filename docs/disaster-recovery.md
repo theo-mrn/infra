@@ -48,31 +48,29 @@ rm /tmp/sealed-secrets-master-key.yaml
 
 ## 2. Perte d'un nœud worker
 
-Le worker héberge les workloads applicatifs. Longhorn réplique les PVC sur les 2 nœuds.
+Le worker héberge les workloads applicatifs. Avec `local-path`, les PVC sont liés au nœud
+sur lequel ils ont été créés — **aucune réplication entre nœuds**.
 
-**Impact** : applications indisponibles, données accessibles depuis le master.
+**Impact** : applications indisponibles, PVC du worker perdus définitivement (restauration via Velero requise).
 
 ```bash
 export KUBECONFIG=./ansible/kubeconfig.yml
 
-# 1. Vérifier l'état Longhorn
+# 1. Vérifier l'état du nœud
 kubectl get nodes
-kubectl get volumes -n longhorn-system
 
 # 2. Reprovisionner le nœud (Ansible)
 ansible-playbook ansible/playbooks/01-bootstrap.yml --vault-password-file .vault_pass --limit worker
 ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass --limit worker
 
-# 3. Longhorn réplique automatiquement les volumes sur le nœud rejoint
-# Surveiller la réplication :
-kubectl get replicas -n longhorn-system -w
+# 3. Restaurer les PVC perdus depuis Velero (voir section 4)
 ```
 
 ---
 
 ## 3. Perte du nœud master
 
-**Impact** : cluster entièrement indisponible. Toutes les données sont dans Longhorn (worker) et S3 (Velero).
+**Impact** : cluster entièrement indisponible. Les PVC du master sont perdus ; restauration via S3 (Velero) requise.
 
 ### 3a. Reprovisionner le master
 
@@ -100,7 +98,7 @@ kubectl rollout restart deployment -n sealed-secrets
 
 ### 3c. Réinstaller les composants système
 
-Suivre l'ordre d'installation du README (étapes 6 à 11).
+Suivre l'ordre d'installation du README (étapes 5 à 9).
 
 ### 3d. Restaurer depuis Velero
 
@@ -175,9 +173,6 @@ kubectl get pvc -A
 
 # ArgoCD sync status
 kubectl get applications -n argocd
-
-# Volumes Longhorn
-kubectl get volumes -n longhorn-system
 
 # Certificats TLS
 kubectl get certificates -A

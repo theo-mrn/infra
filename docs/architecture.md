@@ -16,7 +16,7 @@ DNS : `cluster.afflair.app` + `*.cluster.afflair.app` → 76.13.44.160
 | Kubernetes | k3s (Flannel VXLAN, sans kube-proxy) | — |
 | Ingress | Traefik v3 + Let's Encrypt (httpChallenge) | `traefik` |
 | Auth | Authelia SSO (OIDC + Redis) | `authelia` |
-| Storage | Longhorn (réplication 2x, backup S3) | `longhorn-system` |
+| Storage | local-path (volumes locaux par nœud, backup S3) | — |
 | GitOps | ArgoCD (12 applications) | `argocd` |
 | Monitoring | kube-prometheus-stack + Loki + Promtail | `monitoring` |
 | Backup | Velero (quotidien 2h) + CronJob Loki → S3 | `velero` |
@@ -42,18 +42,16 @@ DNS : `cluster.afflair.app` + `*.cluster.afflair.app` → 76.13.44.160
 ```
 1. terraform/aws/          → S3 bucket + IAM user (velero credentials)
 2. ansible 01-bootstrap    → hardening OS, UFW, clé SSH worker
-3. ansible 02-k3s          → installe k3s master + worker, génère kubeconfig.yml
-4. ansible longhorn-prereqs → modules kernel iscsi/nfs
-5. traefik install.sh      → ingress controller
-6. sealed-secrets install.sh → opérateur kubeseal
-7. authelia install.sh     → SSO (dépend de Traefik)
-8. longhorn install.sh     → storage (dépend des prérequis Ansible)
-9. velero install.sh       → backup (dépend de Longhorn + S3)
-10. argocd install.sh      → GitOps (déploie tout le reste)
+3. ansible 02-k3s          → installe k3s master + worker (local-path provisioner inclus), génère kubeconfig.yml
+4. traefik install.sh      → ingress controller
+5. sealed-secrets install.sh → opérateur kubeseal
+6. authelia install.sh     → SSO (dépend de Traefik)
+7. velero install.sh       → backup (dépend de S3)
+8. argocd install.sh       → GitOps (déploie tout le reste)
 ```
 
 > **Note** : monitoring, Falco, CrowdSec, Trivy et les applications sont déployés
-> automatiquement par ArgoCD à l'étape 10. Il n'y a pas de script install.sh pour ces composants.
+> automatiquement par ArgoCD à la dernière étape. Il n'y a pas de script install.sh pour ces composants.
 
 ## Sécurité
 
@@ -71,9 +69,8 @@ DNS : `cluster.afflair.app` + `*.cluster.afflair.app` → 76.13.44.160
 
 | Quoi | Outil | Fréquence | Destination | Rétention |
 |------|-------|-----------|-------------|-----------|
-| Manifests k8s + snapshots PVC | Velero CSI | Quotidien 2h | `s3://.../velero/` | 7 jours |
+| Manifests k8s + volumes PVC | Velero (node-agent restic/kopia) | Quotidien 2h | `s3://.../velero/` | 7 jours |
 | Données Loki | CronJob aws-cli | Horaire | `s3://.../loki/` | Illimité |
-| Snapshots Longhorn | Longhorn → S3 | Via Velero | `s3://.../longhorn/` | 7 jours |
 
 Bucket S3 : `velero-k3s-cluster-backup` (eu-west-3) — chiffrement AES256, versioning activé.
 

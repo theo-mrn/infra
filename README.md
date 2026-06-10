@@ -56,29 +56,23 @@ Après ce step, le worker accepte la clé SSH — plus besoin de mot de passe.
 
 ```bash
 ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass
-# → génère ansible/kubeconfig.yml
+# → génère ansible/kubeconfig.yml (le provisioner local-path est inclus par défaut)
 export KUBECONFIG=./ansible/kubeconfig.yml
 ```
 
-### 5. Prérequis Longhorn (iscsi + nfs)
-
-```bash
-ansible-playbook ansible/longhorn-prereqs.yml --vault-password-file .vault_pass
-```
-
-### 6. Traefik (ingress + Let's Encrypt)
+### 5. Traefik (ingress + Let's Encrypt)
 
 ```bash
 bash kubernetes/system/traefik/install.sh
 ```
 
-### 7. Sealed Secrets (opérateur kubeseal)
+### 6. Sealed Secrets (opérateur kubeseal)
 
 ```bash
 bash kubernetes/system/sealed-secrets/install.sh
 ```
 
-### 8. Authelia (SSO)
+### 7. Authelia (SSO)
 
 ```bash
 # Appliquer d'abord les SealedSecrets Authelia
@@ -86,24 +80,17 @@ kubectl apply -f kubernetes/system/authelia/
 bash kubernetes/system/authelia/install.sh
 ```
 
-### 9. Longhorn (storage distribué)
+### 8. Velero (backup)
 
 ```bash
 export VELERO_ACCESS_KEY_ID=$(cd terraform/aws && terraform output -raw velero_access_key_id)
 export VELERO_SECRET_ACCESS_KEY=$(cd terraform/aws && terraform output -raw velero_secret_access_key)
-bash kubernetes/system/longhorn/install.sh
-```
-
-### 10. Velero (backup)
-
-```bash
-# VELERO_ACCESS_KEY_ID et VELERO_SECRET_ACCESS_KEY doivent être définis (cf. étape 9)
 bash kubernetes/system/velero/install.sh
 kubectl apply -f kubernetes/system/velero/schedule.yml
 kubectl apply -f kubernetes/system/velero/loki-backup-cronjob.yml
 ```
 
-### 11. ArgoCD (GitOps — déploie tout le reste)
+### 9. ArgoCD (GitOps — déploie tout le reste)
 
 ```bash
 bash kubernetes/system/argocd/install.sh
@@ -111,7 +98,7 @@ bash kubernetes/system/argocd/install.sh
 # CrowdSec, Trivy, beacon, times-server, trivyhub, sonarqube
 ```
 
-### 12. Sceller la clé CrowdSec pour beacon
+### 10. Sceller la clé CrowdSec pour beacon
 
 Après que CrowdSec soit opérationnel, récupérer la clé bouncer et la sceller :
 
@@ -144,7 +131,6 @@ kubectl get pods -A
 | ArgoCD | https://argocd.cluster.afflair.app | Authelia + ArgoCD natif |
 | Grafana | https://grafana.cluster.afflair.app | Authelia + OIDC |
 | Traefik | https://traefik.cluster.afflair.app | Authelia |
-| Longhorn | https://longhorn.cluster.afflair.app | Authelia |
 | Beacon | https://beacon.cluster.afflair.app | Authelia |
 | SonarQube | https://sonarqube.cluster.afflair.app | Authelia |
 
@@ -155,7 +141,7 @@ kubectl get pods -A
 ### Infrastructure
 - **k3s** — Kubernetes léger, Flannel VXLAN overlay, sans kube-proxy
 - **Traefik v3** — ingress controller, Let's Encrypt httpChallenge
-- **Longhorn** — storage distribué, réplication 2x
+- **local-path** — provisioner de volumes locaux (k3s natif, sans réplication)
 - **Sealed Secrets** — chiffrement asymétrique des secrets Kubernetes
 - **ArgoCD** — GitOps, 12 applications déployées automatiquement
 
@@ -173,7 +159,7 @@ kubectl get pods -A
 - **UFW** — SSH/API restreints aux IPs de gestion
 
 ### Backup
-- **Velero** — backup quotidien à 2h (manifests k8s + snapshots CSI Longhorn)
+- **Velero** — backup quotidien à 2h (manifests k8s + volumes via node-agent restic/kopia)
 - **CronJob aws-cli** — sync horaire Loki → S3
 - **S3** `velero-k3s-cluster-backup` (eu-west-3) — chiffrement AES256, versioning activé
 
@@ -185,9 +171,8 @@ kubectl get pods -A
 
 | Quoi | Outil | Fréquence | Destination | Rétention |
 |------|-------|-----------|-------------|-----------|
-| Manifests k8s + snapshots PVC | Velero CSI | Quotidien 2h | `s3://.../velero/` | 7 jours |
+| Manifests k8s + volumes PVC | Velero (node-agent restic/kopia) | Quotidien 2h | `s3://.../velero/` | 7 jours |
 | Données Loki (logs) | CronJob aws-cli | Horaire | `s3://.../loki/` | Illimité |
-| Snapshots Longhorn | Longhorn → S3 | Via Velero | `s3://.../longhorn/` | 7 jours |
 
 ### Backup manuel
 
@@ -205,9 +190,7 @@ spec:
     - traefik
   storageLocation: aws
   ttl: 168h
-  snapshotVolumes: true
-  volumeSnapshotLocations:
-    - csi
+  defaultVolumesToFsBackup: true
 EOF
 ```
 
@@ -226,8 +209,8 @@ Voir `docs/disaster-recovery.md` pour les procédures complètes.
 | Variable | Usage | Source |
 |----------|-------|--------|
 | `vault_worker_ssh_pass` | Ansible Vault — mot de passe SSH worker | manuel |
-| `VELERO_ACCESS_KEY_ID` | AWS pour Velero + Longhorn | `terraform output velero_access_key_id` |
-| `VELERO_SECRET_ACCESS_KEY` | AWS pour Velero + Longhorn | `terraform output velero_secret_access_key` |
+| `VELERO_ACCESS_KEY_ID` | AWS pour Velero | `terraform output velero_access_key_id` |
+| `VELERO_SECRET_ACCESS_KEY` | AWS pour Velero | `terraform output velero_secret_access_key` |
 
 ---
 
@@ -244,20 +227,18 @@ ansible/
     03-cis-hardening.yml         # contrôles CIS Level 1
     04-kube-bench.yml            # audit CIS k3s
     05-firewall-hardening.yml    # règles UFW par nœud
-  longhorn-prereqs.yml           # prérequis Longhorn (iscsi, nfs-common)
   roles/
     common/                      # hardening, UFW, packages
+    cis_hardening/                # contrôles CIS Level 1
     k3s_master/                  # install k3s server
     k3s_worker/                  # install k3s agent
-    longhorn_prereqs/            # modules kernel + packages
 
 kubernetes/
   system/
     argocd/                      # GitOps — install.sh + 12 app manifests
     authelia/                    # SSO — helm-values + sealed secrets
     traefik/                     # ingress + Let's Encrypt
-    longhorn/                    # storage distribué + backup S3
-    velero/                      # backup k8s + CSI snapshots
+    velero/                      # backup k8s + volumes (restic/kopia)
     sealed-secrets/              # opérateur kubeseal + pub-cert.pem
     monitoring/                  # dashboards, alerting rules (Prometheus/Grafana)
     network-policies/            # NetworkPolicies par namespace

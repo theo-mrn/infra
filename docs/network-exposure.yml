@@ -117,12 +117,6 @@ exposed_services:
     public: true
     type: infrastructure
 
-  - host: longhorn.cluster.afflair.app
-    namespace: longhorn-system
-    auth: authelia
-    public: true
-    type: infrastructure
-
   - host: traefik.cluster.afflair.app
     namespace: traefik
     auth: authelia

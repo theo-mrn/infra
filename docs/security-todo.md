@@ -18,8 +18,8 @@ kubectl get secret -n sealed-secrets -l sealedsecrets.bitnami.com/sealed-secrets
 ## Priorité moyenne
 
 ### NetworkPolicies — namespaces infrastructure restants
-- **Couverts ✅** : `times-server`, `times-server-staging`, `trivyhub`
-- **Restants** : `monitoring`, `falco`, `crowdsec`, `velero`, `longhorn-system`
+- **Couverts ✅** : `times-server`, `times-server-staging`, `trivyhub`, `monitoring`
+- **Restants** : `falco`, `crowdsec`, `velero`
 
 Les namespaces infra sont volontairement laissés en dernier — risque de casser les communications internes entre composants (ex. Prometheus → node-exporter, Loki scraping).
 
@@ -27,10 +27,10 @@ Les namespaces infra sont volontairement laissés en dernier — risque de casse
 Aucune politique PSS sur les namespaces. N'importe quel pod peut demander des capabilities élevées.
 
 **Action** : appliquer `baseline` sur les namespaces applicatifs (`times-server`, `trivyhub`, `beacon`).
-Les namespaces système (Falco, Longhorn) nécessitent `privileged` — ne pas restreindre.
+Les namespaces système (Falco) nécessitent `privileged` — ne pas restreindre.
 
 ### Pods privileged non audités régulièrement
-Falco, Longhorn (instance-manager, engine-image, csi-plugin) et SonarQube init tournent en mode privileged.
+Falco et SonarQube init tournent en mode privileged.
 Trivy Operator alerte déjà sur les CVE critiques/hautes — vérifier activement ces rapports.
 
 ---

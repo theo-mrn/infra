@@ -6,10 +6,6 @@ configuration:
       prefix: velero
       config:
         region: eu-west-3
-  volumeSnapshotLocation:
-    - name: csi
-      provider: csi
-  features: EnableCSI
 
 credentials:
   existingSecret: velero-aws-credentials

@@ -43,7 +43,7 @@ spec:
             enabled: true
             size: 5Gi
             storageClass: local-path
-            existingClaim: grafana-longhorn
+            existingClaim: grafana-data
           additionalDataSources:
             - name: Loki
               type: loki

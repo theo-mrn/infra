@@ -1,4 +1,4 @@
-# Velero : backup K8s + snapshots CSI Longhorn → S3
+# Velero : backup K8s + volumes (local-path) → S3
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

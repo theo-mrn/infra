@@ -1,5 +1,0 @@
----
-- name: Install Longhorn prerequisites
-  hosts: all
-  roles:
-    - longhorn_prereqs
