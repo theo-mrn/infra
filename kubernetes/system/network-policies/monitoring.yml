@@ -200,6 +200,14 @@ spec:
             cidr: 0.0.0.0/0
       ports:
         - port: 443
+    # K8s API (sidecar loki-sc-rules, requis pour fonctionner)
+    - to:
+        - ipBlock:
+            cidr: 76.13.44.160/32
+        - ipBlock:
+            cidr: 217.65.146.24/32
+      ports:
+        - port: 6443
     # DNS
     - to:
         - namespaceSelector: {}
