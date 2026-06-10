@@ -44,7 +44,6 @@ persistence:
   enabled: true
   size: 128Mi
   storageClass: local-path
-  existingClaim: traefik-longhorn
 
 tolerations:
   - key: node-role.kubernetes.io/control-plane

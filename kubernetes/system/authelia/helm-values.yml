@@ -1,13 +1,6 @@
 pod:
   replicas: 1
   kind: Deployment
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: node-role.kubernetes.io/control-plane
-                operator: Exists
   resources:
     requests:
       memory: 128Mi
@@ -15,6 +8,14 @@ pod:
     limits:
       memory: 256Mi
       cpu: 200m
+  selectors:
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: Exists
 
 configMap:
   theme: dark

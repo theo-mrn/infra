@@ -1,15 +1,17 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards-custom
+  name: grafana-dashboards-logging
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Logging
 data:
   kubernetes-logs.json: |
     {
       "title": "Kubernetes Logs",
-      "uid": "k8s-logs-v1",
+      "uid": "k8s-logs-v2",
       "timezone": "browser",
       "refresh": "10s",
       "time": { "from": "now-1h", "to": "now" },
@@ -79,10 +81,21 @@ data:
       ],
       "schemaVersion": 38
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-security
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Security
+data:
   falco.json: |
     {
       "title": "Falco Security Events",
-      "uid": "falco-security-v1",
+      "uid": "falco-security-v2",
       "timezone": "browser",
       "refresh": "30s",
       "time": { "from": "now-6h", "to": "now" },
@@ -245,4 +258,3 @@ data:
       ],
       "schemaVersion": 38
     }
-    
