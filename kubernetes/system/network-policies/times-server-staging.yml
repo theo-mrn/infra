@@ -64,6 +64,15 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: times-server
+          podSelector:
+            matchLabels:
+              db-access: "true"
+      ports:
+        - port: 5432
+    - from:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: cnpg-system
       ports:
         - port: 5432
