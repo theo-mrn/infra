@@ -44,6 +44,13 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+    # APIs externes (Clerk, Stripe, Resend, Google Calendar, Sentry...)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 443
+          protocol: TCP
 ---
 # Postgres : reçoit de times-server et CNPG operator
 apiVersion: networking.k8s.io/v1
