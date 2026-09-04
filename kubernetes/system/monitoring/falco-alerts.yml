@@ -49,12 +49,7 @@ spec:
             summary: "Falco — volume élevé d'avertissements"
             description: "Plus de 20 warnings Falco en 10 minutes."
 
-        - alert: FalcoSilenced
-          expr: |
-            absent(falcosecurity_falcosidekick_falco_events_total)
-          for: 15m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Falco — aucun événement reçu"
-            description: "Falco n'envoie plus d'événements depuis 15 minutes."
+        # FalcoSilenced retirée : Falco est volontairement désinstallé du cluster (voir
+        # argocd/apps/falco.yml, Application supprimée) — cette règle sonnerait en
+        # continu pour un état voulu plutôt qu'un incident. À réintroduire si Falco est
+        # redéployé.
