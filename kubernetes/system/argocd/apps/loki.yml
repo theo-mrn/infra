@@ -35,6 +35,13 @@ spec:
             enabled: true
             size: 10Gi
             storageClass: local-path
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
         backend:
           replicas: 0
         read:

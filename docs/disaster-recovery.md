@@ -2,19 +2,26 @@
 
 Procédures de restauration pour le cluster afflair.app.
 
+> **Aucun backup automatisé n'est actuellement en place** (Velero retiré en 2026-09,
+> bucket S3 supprimé). Les procédures ci-dessous couvrent uniquement ce qui est
+> récupérable via l'IaC (GitOps) et les sauvegardes manuelles existantes (clé
+> sealed-secrets). Les données applicatives (PVC : bases de données, volumes) ne
+> sont **pas récupérables** en cas de perte d'un nœud tant qu'aucune solution de
+> backup n'est remise en place.
+
 ---
 
 ## 1. Backup de la clé privée Sealed Secrets
 
-**À faire manuellement après chaque installation ou rotation.**
+**À faire manuellement après chaque installation ou rotation — c'est la seule
+sauvegarde manuelle critique du cluster.**
 
-La clé privée sealed-secrets n'est jamais sauvegardée par Velero. Sans elle, tous les
-SealedSecrets du repo sont définitivement irrécupérables.
+Sans cette clé, tous les `SealedSecret` du repo sont définitivement irrécupérables.
 
 ```bash
 export KUBECONFIG=/Users/theo/Developer/infra/ansible/kubeconfig.yml
 
-# Exporter la clé privée (sealed-secrets tourne dans kube-system)
+# Exporter la clé privée (le controller sealed-secrets tourne dans kube-system)
 kubectl get secrets -n kube-system \
   -l sealedsecrets.bitnami.com/sealed-secrets-key \
   -o yaml > ~/sealed-secrets-master-key.yaml
@@ -46,12 +53,13 @@ rm /tmp/sealed-secrets-master-key.yaml
 
 ---
 
-## 2. Perte d'un nœud worker
+## 2. Perte d'un nœud worker (worker ou worker2)
 
-Le worker héberge les workloads applicatifs. Avec `local-path`, les PVC sont liés au nœud
-sur lequel ils ont été créés — **aucune réplication entre nœuds**.
+Avec `local-path`, les PVC sont liés au nœud sur lequel ils ont été créés —
+**aucune réplication entre nœuds**.
 
-**Impact** : applications indisponibles, PVC du worker perdus définitivement (restauration via Velero requise).
+**Impact** : pods schedulés sur ce nœud indisponibles ; PVC de ce nœud **perdus
+définitivement** (pas de backup actuellement).
 
 ```bash
 export KUBECONFIG=./ansible/kubeconfig.yml
@@ -59,18 +67,25 @@ export KUBECONFIG=./ansible/kubeconfig.yml
 # 1. Vérifier l'état du nœud
 kubectl get nodes
 
-# 2. Reprovisionner le nœud (Ansible)
-ansible-playbook ansible/playbooks/01-bootstrap.yml --vault-password-file .vault_pass --limit worker
-ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass --limit worker
+# 2. Retirer proprement l'ancien enregistrement si le nœud est irrécupérable
+kubectl delete node <nom-du-worker>
 
-# 3. Restaurer les PVC perdus depuis Velero (voir section 4)
+# 3. Reprovisionner le nœud (Ansible) — bootstrap complet + join k3s
+ansible-playbook ansible/playbooks/01-bootstrap.yml --vault-password-file .vault_pass --limit <worker|worker2>
+ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass --limit <worker|worker2>
+
+# 4. ArgoCD reschedule automatiquement les workloads stateless sur les nœuds
+#    disponibles (selfHeal). Les workloads avec PVC sur le nœud perdu doivent
+#    être recréés manuellement (les données ne sont pas récupérables).
 ```
 
 ---
 
 ## 3. Perte du nœud master
 
-**Impact** : cluster entièrement indisponible. Les PVC du master sont perdus ; restauration via S3 (Velero) requise.
+**Impact** : cluster entièrement indisponible (control-plane k3s). Les PVC du
+master sont perdus (Loki, Jenkins, Traefik acme.json, Authelia — pas de backup
+actuellement).
 
 ### 3a. Reprovisionner le master
 
@@ -84,80 +99,45 @@ ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass 
 
 export KUBECONFIG=./ansible/kubeconfig.yml
 
-# 3. Rejoindre le worker existant au nouveau master
-# (le worker doit être reprovisoinné si son token k3s a changé)
+# 3. Rejoindre les workers existants au nouveau master
+# (chaque worker doit être reprovisionné si son token k3s a changé)
+ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass --limit worker,worker2
 ```
 
-### 3b. Restaurer la clé Sealed Secrets
+### 3b. Réinstaller ArgoCD (seul composant hors GitOps)
 
 ```bash
-# Récupérer la clé sauvegardée depuis le gestionnaire de secrets
-kubectl apply -f sealed-secrets-master-key.yaml
-kubectl rollout restart deployment -n sealed-secrets
+bash kubernetes/system/argocd/install.sh
 ```
 
-### 3c. Réinstaller les composants système
-
-Suivre l'ordre d'installation du README (étapes 5 à 9).
-
-### 3d. Restaurer depuis Velero
+### 3c. Restaurer la clé Sealed Secrets
 
 ```bash
-# Lister les backups disponibles
-velero backup get
-
-# Restaurer le dernier backup complet
-velero restore create --from-backup NOM_DU_BACKUP --wait
-
-# Vérifier
-kubectl get pods -A
+gpg --decrypt ~/sealed-secrets-master-key.yaml.gpg | kubectl apply -f -
+kubectl rollout restart deployment -n kube-system -l app.kubernetes.io/name=sealed-secrets
 ```
+
+### 3d. Réappliquer toutes les Applications ArgoCD
+
+Toute la stack système (Traefik, Authelia, sealed-secrets, CNPG, trivy-operator,
+SonarQube, Jenkins, monitoring, CrowdSec) et les applications sont décrites en
+`Application` ArgoCD :
+
+```bash
+kubectl apply -f kubernetes/system/argocd/apps/
+```
+
+ArgoCD reconstruit alors l'intégralité de la stack depuis Git. Les `SealedSecret`
+présents dans le repo se déchiffrent automatiquement une fois la clé privée
+restaurée (étape 3c).
+
+> Les données perdues (bases de données CNPG/PostgreSQL, index SonarQube, historique
+> Jenkins, dashboards Grafana custom) ne sont pas récupérées par cette procédure —
+> seule la configuration/l'infrastructure l'est.
 
 ---
 
-## 4. Restauration Velero ciblée
-
-```bash
-export KUBECONFIG=./ansible/kubeconfig.yml
-
-# Lister les backups
-velero backup get
-
-# Restaurer un namespace spécifique
-velero restore create \
-  --from-backup NOM_DU_BACKUP \
-  --include-namespaces times-server \
-  --wait
-
-# Restaurer une ressource spécifique
-velero restore create \
-  --from-backup NOM_DU_BACKUP \
-  --include-resources deployments \
-  --include-namespaces beacon \
-  --wait
-```
-
----
-
-## 5. Restaurer les logs Loki depuis S3
-
-Les données Loki sont syncées toutes les heures dans `s3://velero-k3s-cluster-backup/loki/`.
-
-```bash
-# Synchroniser S3 → local pour inspection
-aws s3 sync s3://velero-k3s-cluster-backup/loki/ /tmp/loki-restore/ \
-  --region eu-west-3
-
-# Ou restaurer directement dans le PVC Loki
-# (nécessite d'arrêter Loki, copier les données, redémarrer)
-kubectl scale statefulset loki -n monitoring --replicas=0
-# ... copier les données dans le PVC ...
-kubectl scale statefulset loki -n monitoring --replicas=1
-```
-
----
-
-## 6. Vérifications post-restauration
+## 4. Vérifications post-restauration
 
 ```bash
 export KUBECONFIG=./ansible/kubeconfig.yml
@@ -171,9 +151,19 @@ kubectl get pods -A | grep -v Running | grep -v Completed
 # PVC
 kubectl get pvc -A
 
-# ArgoCD sync status
+# ArgoCD sync status — toutes les Applications doivent finir Synced/Healthy
 kubectl get applications -n argocd
 
-# Certificats TLS
-kubectl get certificates -A
+# Accès HTTPS (certificats Let's Encrypt réémis automatiquement par Traefik)
+curl -I https://auth.cluster.afflair.app
 ```
+
+---
+
+## À faire pour améliorer la résilience
+
+- **Remettre en place un backup automatisé** (Velero + nouveau bucket S3 avec un
+  backend Terraform séparé du bucket de backup, ou alternative) — priorité haute,
+  aucune donnée applicative n'est actuellement récupérable en cas de perte de nœud.
+- Automatiser la sauvegarde périodique de la clé sealed-secrets (actuellement 100%
+  manuelle).

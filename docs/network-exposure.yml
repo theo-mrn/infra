@@ -1,5 +1,5 @@
 # Surface d'attaque réseau — afflair.app cluster
-# Dernière mise à jour : 2026-06-09
+# Dernière mise à jour : 2026-08-31
 
 management_ips:
   - ip: "37.71.179.238"
@@ -8,6 +8,8 @@ management_ips:
     description: "Worker node"
   - ip: "76.13.44.160"
     description: "Master node"
+  - ip: "179.198.197.71"
+    description: "Worker2 node"
 
 # ─── FIREWALL NODES ──────────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ nodes:
         proto: tcp
         service: SSH
         access: restricted
-        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
 
       - port: 80
         proto: tcp
@@ -38,13 +40,13 @@ nodes:
         proto: tcp
         service: Kubernetes API Server
         access: restricted
-        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
 
       - port: 8472
         proto: udp
         service: Flannel VXLAN
         access: restricted
-        allowed_from: [217.65.146.24]
+        allowed_from: [217.65.146.24, 179.198.197.71]
         note: "Réseau overlay inter-nodes k3s, trafic chiffré"
 
       - port: 9100
@@ -57,13 +59,13 @@ nodes:
         proto: tcp
         service: k3s supervisor
         access: restricted
-        allowed_from: [217.65.146.24]
+        allowed_from: [217.65.146.24, 179.198.197.71]
 
       - port: 10250
         proto: tcp
         service: Kubelet
         access: restricted
-        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
 
   worker:
     ip: "217.65.146.24"
@@ -73,7 +75,7 @@ nodes:
         proto: tcp
         service: SSH
         access: restricted
-        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
 
       - port: 8472
         proto: udp
@@ -86,13 +88,42 @@ nodes:
         proto: tcp
         service: Node Exporter
         access: restricted
-        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
 
       - port: 10250
         proto: tcp
         service: Kubelet
         access: restricted
-        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160]
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
+
+  worker2:
+    ip: "179.198.197.71"
+    firewall: ufw
+    ports:
+      - port: 22
+        proto: tcp
+        service: SSH
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
+
+      - port: 8472
+        proto: udp
+        service: Flannel VXLAN
+        access: restricted
+        allowed_from: [76.13.44.160]
+        note: "Réseau overlay inter-nodes k3s, trafic chiffré"
+
+      - port: 9100
+        proto: tcp
+        service: Node Exporter
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
+
+      - port: 10250
+        proto: tcp
+        service: Kubelet
+        access: restricted
+        allowed_from: [37.71.179.238, 217.65.146.24, 76.13.44.160, 179.198.197.71]
 
 # ─── SERVICES EXPOSÉS VIA TRAEFIK (port 443) ─────────────────────────────────
 

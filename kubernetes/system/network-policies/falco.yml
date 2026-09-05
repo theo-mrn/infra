@@ -36,6 +36,12 @@ spec:
             cidr: 0.0.0.0/0
       ports:
         - port: 6443
+    # falcoctl (init container) : télécharge les règles/plugins depuis falcosecurity.github.io
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 443
 ---
 # Falcosidekick : reçoit events de Falco, envoie webhooks Discord
 apiVersion: networking.k8s.io/v1

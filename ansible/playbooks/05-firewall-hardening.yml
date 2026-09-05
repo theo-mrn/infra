@@ -4,11 +4,8 @@
 - name: Firewall hardening - restrict sensitive ports
   hosts: all
   become: true
-  vars:
-    management_ips:
-      - "37.71.179.238"  # IP de gestion Theo
-      - "217.65.146.24"  # worker
-      - "76.13.44.160"   # master
+  # management_ips est calculée dynamiquement depuis l'inventaire
+  # (voir inventory/group_vars/all/main.yml) — pas besoin de la maintenir ici.
 
   tasks:
     # SSH

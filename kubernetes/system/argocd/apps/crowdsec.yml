@@ -68,10 +68,20 @@ spec:
     targetRevision: "0.*"
     helm:
       valuesObject:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
         bouncer:
-          crowdsec_bouncer_api_key_secret:
-            name: crowdsec-bouncer-key
-            key: api-key
+          # Placeholder : le chart valide que cette valeur est non vide au rendu Helm,
+          # mais la vraie clé est injectée juste après par
+          # kubernetes/system/crowdsec/patch-bouncer-secret.sh (patch valueFrom.secretKeyRef
+          # vers le SealedSecret crowdsec-bouncer-api-key). Ce placeholder n'est jamais
+          # utilisé tel quel par le pod vivant.
+          crowdsec_bouncer_api_key: "placeholder-replaced-by-patch-script"
           crowdsec_agent_host: "crowdsec-service.crowdsec.svc.cluster.local:8080"
   destination:
     server: https://kubernetes.default.svc

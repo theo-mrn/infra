@@ -9,7 +9,7 @@
     curl -sfL https://get.k3s.io | sh -s - agent \
       --server https://{{ hostvars['master']['ansible_host'] }}:6443 \
       --token {{ hostvars['master']['k3s_node_token'] }} \
-      --node-name worker
+      --node-name {{ inventory_hostname }}
   when: not k3s_binary.stat.exists
   environment:
     K3S_URL: "https://{{ hostvars['master']['ansible_host'] }}:6443"

@@ -1,0 +1,12 @@
+---
+# IP de gestion perso (poste de Theo, pas dans l'inventaire k3s)
+personal_management_ip: "37.71.179.238"
+
+# Liste dérivée automatiquement des hosts masters + workers de l'inventaire.
+# Ajouter un node = l'ajouter dans hosts.yml, cette liste se met à jour seule.
+management_ips: >-
+  {{
+    [personal_management_ip]
+    + groups['masters'] | map('extract', hostvars, 'ansible_host') | list
+    + groups['workers'] | map('extract', hostvars, 'ansible_host') | list
+  }}

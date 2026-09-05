@@ -17,6 +17,13 @@ spec:
           assertNoLeakedSecrets: false
           ingress:
             enabled: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
           grafana.ini:
             server:
               root_url: https://grafana.cluster.afflair.app
@@ -51,6 +58,13 @@ spec:
               access: proxy
               isDefault: false
           sidecar:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
             dashboards:
               enabled: true
               label: grafana_dashboard
@@ -63,6 +77,13 @@ spec:
                 allowUiUpdates: false
         prometheus:
           prometheusSpec:
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                cpu: 1
+                memory: 1Gi
             retention: 7d
             readinessProbeInitialDelay: 180
             readinessProbeTimeoutSeconds: 10
@@ -135,6 +156,13 @@ spec:
                       {{ .Annotations.description }}
                       {{ end }}
           alertmanagerSpec:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
             storage:
               volumeClaimTemplate:
                 spec:
@@ -145,6 +173,30 @@ spec:
                       storage: 2Gi
         nodeExporter:
           enabled: true
+        prometheus-node-exporter:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+        kube-state-metrics:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+        prometheusOperator:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
         kubeEtcd:
           enabled: false
         kubeControllerManager:
