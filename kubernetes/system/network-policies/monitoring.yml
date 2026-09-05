@@ -48,6 +48,24 @@ spec:
         - port: 10250
         - port: 10255
         - port: 2801
+        - port: 9153  # coredns metrics
+        - port: 3000  # grafana metrics
+    # Scrape kubelet/cadvisor/node-exporter directement sur l'IP des nodes :
+    # namespaceSelector ne couvre que le trafic vers des pods, pas vers l'IP host où
+    # le kubelet écoute nativement et où node-exporter écoute aussi (hostNetwork: true)
+    # — sans ceci ces cibles sont inatteignables (constaté : connection refused,
+    # TargetDown/KubeletInstanceUnreachable sur les 3 nodes).
+    - to:
+        - ipBlock:
+            cidr: 76.13.44.160/32
+        - ipBlock:
+            cidr: 217.65.146.24/32
+        - ipBlock:
+            cidr: 179.198.197.71/32
+      ports:
+        - port: 10250
+        - port: 10255
+        - port: 9100
     # AlertManager
     - to:
         - podSelector:
@@ -93,6 +111,14 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: traefik
+      ports:
+        - port: 3000
+    # Scrape de ses propres métriques par Prometheus (manquant : Prometheus autorisait
+    # bien ce trafic en egress, mais Grafana le refusait en ingress — TargetDown).
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
       ports:
         - port: 3000
   egress:
@@ -237,6 +263,7 @@ spec:
               app.kubernetes.io/name: prometheus
       ports:
         - port: 9093
+        - port: 8080  # métriques du sidecar config-reloader, scrapées par Prometheus
     - from:
         - podSelector:
             matchLabels:
