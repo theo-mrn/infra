@@ -13,7 +13,7 @@ DNS : `cluster.afflair.app` + `*.cluster.afflair.app` → 76.13.44.160
 ## Stack
 
 Tous les composants système sont déployés via ArgoCD (Applications dans
-`kubernetes/system/argocd/apps/`) — plus aucune installation manuelle (`install.sh`)
+`argocd_registry/kubernetes/system/argocd/apps/`) — plus aucune installation manuelle (`install.sh`)
 n'est utilisée pour ces composants.
 
 | Couche | Composant | Namespace |
@@ -48,8 +48,9 @@ Deux mécanismes de protection coexistent :
 | Jenkins | ✅ | Plugin `oic-auth`, security realm manuelle (client_secret_post) |
 | SonarQube | ❌ | Non supporté en Community Edition (fonctionnalité payante) |
 
-Les secrets clients OIDC sont stockés en `SealedSecret` (ex: `argocd/sealed-oidc-secret.yml`,
-`jenkins/sealed-oidc-secret.yml`), jamais en clair dans le repo.
+Les secrets clients OIDC sont stockés en `SealedSecret` dans `argocd_registry`
+(ex: `kubernetes/system/argocd/sealed-oidc-secret.yml`,
+`kubernetes/system/jenkins/sealed-oidc-secret.yml`), jamais en clair dans un repo.
 
 ## Applications déployées
 
@@ -75,14 +76,14 @@ des projets pérennes :
 ```
 1. ansible 01-bootstrap    → hardening OS, UFW, clé SSH worker(s)
 2. ansible 02-k3s          → installe k3s master + workers (local-path provisioner inclus), génère kubeconfig.yml
-3. argocd/install.sh       → GitOps (bootstrap manuel one-shot, seul composant encore installé hors ArgoCD)
-4. kubectl apply -f kubernetes/system/argocd/apps/  → toutes les Applications (Traefik, Authelia,
+3. argocd_registry/kubernetes/system/argocd/install.sh → GitOps (bootstrap manuel one-shot, seul composant hors ArgoCD)
+4. kubectl apply -f argocd_registry/kubernetes/system/argocd/apps/  → toutes les Applications (Traefik, Authelia,
    sealed-secrets, CNPG, trivy-operator, SonarQube, Jenkins, monitoring, CrowdSec, apps...)
 ```
 
-> ArgoCD lui-même reste installé via `argocd/install.sh` (manifest brut officiel) — c'est
+> ArgoCD lui-même reste installé via `argocd_registry/kubernetes/system/argocd/install.sh` (manifest brut officiel) — c'est
 > le seul composant "racine" nécessairement hors GitOps, puisqu'il ne peut pas se déployer
-> lui-même. Tout le reste passe par des `Application` ArgoCD (`kubernetes/system/argocd/apps/*.yml`).
+> lui-même. Tout le reste passe par des `Application` ArgoCD (`argocd_registry/kubernetes/system/argocd/apps/*.yml`).
 
 ## Sécurité
 
@@ -114,7 +115,7 @@ backup automatisé n'est actuellement en place.** À planifier si besoin.
 | `ansible/kubeconfig.yml` | gitignored — généré à l'étape k3s | accès kubectl |
 | `ansible/inventory/group_vars/all/vault.yml` | chiffré ansible-vault | mot de passe SSH worker(s) |
 | `.vault_pass` | gitignored | déchiffrement ansible-vault |
-| `kubernetes/system/sealed-secrets/pub-cert.pem` | commité (public) | chiffrement kubeseal |
+| `argocd_registry/kubernetes/system/sealed-secrets/pub-cert.pem` | commité (public) | chiffrement kubeseal |
 | Clé privée sealed-secrets | dans le cluster (`kube-system`, secrets `sealed-secrets-key*`) | **à sauvegarder manuellement**, non couverte par un backup automatisé |
 
 > La clé privée sealed-secrets n'est sauvegardée par aucun mécanisme automatisé (Velero

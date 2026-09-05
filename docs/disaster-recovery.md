@@ -107,7 +107,7 @@ ansible-playbook ansible/playbooks/02-k3s.yml --vault-password-file .vault_pass 
 ### 3b. Réinstaller ArgoCD (seul composant hors GitOps)
 
 ```bash
-bash kubernetes/system/argocd/install.sh
+bash argocd_registry/kubernetes/system/argocd/install.sh
 ```
 
 ### 3c. Restaurer la clé Sealed Secrets
@@ -124,7 +124,7 @@ SonarQube, Jenkins, monitoring, CrowdSec) et les applications sont décrites en
 `Application` ArgoCD :
 
 ```bash
-kubectl apply -f kubernetes/system/argocd/apps/
+kubectl apply -f argocd_registry/kubernetes/system/argocd/apps/
 ```
 
 ArgoCD reconstruit alors l'intégralité de la stack depuis Git. Les `SealedSecret`

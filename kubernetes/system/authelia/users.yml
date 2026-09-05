@@ -1,7 +1,0 @@
-users:
-  theo:
-    displayname: "Theo"
-    password: "$2y$12$QghCnWJpZMREJy6sBBwatOVqnSxZ.0.x/BDrJJTo17tlTe6o28aT."
-    email: theo.morin1402@gmail.com
-    groups:
-      - admins
