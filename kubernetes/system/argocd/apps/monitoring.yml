@@ -145,16 +145,10 @@ spec:
             receivers:
               - name: blackhole
               - name: discord
-                discord_configs:
-                  - webhook_url: "https://discord.com/api/webhooks/1510199630246187162/Xe5yBndY-yYXH08whnW5VERnbjgGYTvxmPr7E3S-897vIqKVWAimJgIqWDIJZicgupid"
+                # Route vers kai (webhook_configs) plutôt que Discord en direct
+                webhook_configs:
+                  - url: "http://kai-investigator-server.kube-system.svc.cluster.local:8080/webhook/alertmanager"
                     send_resolved: false
-                    title: '{{ template "discord.default.title" . }}'
-                    message: |-
-                      {{ range .Alerts }}
-                      **{{ .Labels.alertname }}** — {{ .Labels.severity | toUpper }}
-                      {{ .Annotations.summary }}
-                      {{ .Annotations.description }}
-                      {{ end }}
           alertmanagerSpec:
             resources:
               requests:
