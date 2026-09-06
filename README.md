@@ -185,27 +185,44 @@ restent publics (GitHub et les services tiers ne savent pas s'authentifier),
 l'interface passe en privé. Ces chemins étaient déjà en `bypass` Authelia,
 donc déjà ouverts — mais servis par la même route que l'UI.
 
-### Accès depuis un poste client — split-DNS
+### Accès depuis un poste client — `/etc/hosts`
 
 Le DNS public de `*.cluster.afflair.app` pointe vers l'IP publique du master.
 Un navigateur, même avec Tailscale actif, sort donc par Internet et reçoit
-403. Être sur le tailnet ne suffit pas : encore faut-il que le nom résolve
+403 : être sur le tailnet ne suffit pas, encore faut-il que le nom résolve
 vers l'IP tailnet.
 
-Solution durable, à configurer une fois dans
-[l'admin Tailscale](https://login.tailscale.com/admin/dns) :
-
-> Nameservers → Add nameserver → Custom → `100.69.1.127`,
-> cocher **Restrict to domain** avec `cluster.afflair.app`
-
-Dépannage immédiat sur un poste, en attendant (local à cette machine) :
+La solution retenue est un `/etc/hosts` sur chaque poste d'administration :
 
 ```
 100.69.1.127  argocd.cluster.afflair.app
 100.69.1.127  grafana.cluster.afflair.app
 100.69.1.127  auth.cluster.afflair.app
-# ... un enregistrement par host admin
+100.69.1.127  sonarqube.cluster.afflair.app
+100.69.1.127  traefik.cluster.afflair.app
+100.69.1.127  minio.cluster.afflair.app
+100.69.1.127  s3.cluster.afflair.app
+100.69.1.127  reports.cluster.afflair.app
+100.69.1.127  jenkins.cluster.afflair.app
+100.69.1.127  n8n.cluster.afflair.app
 ```
+
+**Pourquoi pas le split-DNS Tailscale** (Nameservers → Custom, restreint à
+`cluster.afflair.app`) : il suppose un résolveur DNS joignable sur l'IP
+tailnet du master. Il n'y en a pas — `systemd-resolved` n'écoute que sur
+`127.0.0.53` et CoreDNS n'est accessible que depuis le cluster
+(`10.43.0.10`). Vérifié : `dig @100.69.1.127` ne répond pas. Le configurer
+tel quel casserait la résolution au lieu de l'améliorer.
+
+L'exposer demanderait de publier un résolveur sur le tailnet — un service de
+plus à maintenir, pour un bénéfice limité à un administrateur unique. À
+reconsidérer si plusieurs personnes ou de nombreux appareils accèdent au
+cluster.
+
+Si l'accès échoue alors que la résolution est bonne (`dscacheutil -q host -a
+name argocd.cluster.afflair.app`), c'est le navigateur qui réutilise une
+connexion HTTP/2 vers l'ancienne IP : fenêtre privée, ou vider le cache DNS
+du navigateur (`chrome://net-internals/#dns`).
 
 ### Reste à faire
 
