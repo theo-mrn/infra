@@ -226,18 +226,19 @@ du navigateur (`chrome://net-internals/#dns`).
 
 ### Reste à faire
 
-- **Expiration des clés des nœuds — échéance 5 mars 2027.** Les trois nœuds
-  expirent le même jour ; ils sortiraient du tailnet simultanément et SSH
-  comme l'API k3s deviendraient injoignables (rattrapage par la console
-  Hostinger uniquement). Traité en désactivant l'expiration machine par
-  machine dans
-  [l'admin Tailscale](https://login.tailscale.com/admin/machines) :
-  menu `⋯` → *Disable key expiry*, sur `master`, `worker` et `worker2`
-  seulement — pas sur les postes clients, où l'expiration est une sécurité.
+- **Expiration des clés des nœuds : désactivée** (2026-09-06). Les trois clés
+  expiraient le même jour (5 mars 2027) : les nœuds seraient sortis du tailnet
+  simultanément et SSH comme l'API k3s seraient devenus injoignables
+  (rattrapage par la console Hostinger uniquement). L'expiration a été
+  désactivée machine par machine dans
+  [l'admin Tailscale](https://login.tailscale.com/admin/machines)
+  (`⋯` → *Disable key expiry*), sur les trois nœuds seulement — pas sur les
+  postes clients, où l'expiration reste une sécurité.
 
-  L'alternative est de déclarer `tag:k3s` dans les `tagOwners` de l'ACL puis
-  de relancer le playbook — un tag désactive aussi l'expiration, et rend les
-  nœuds ciblables dans les règles ACL :
+  À refaire pour tout nouveau nœud ajouté au cluster. L'alternative
+  déclarative est de créer `tag:k3s` dans les `tagOwners` de l'ACL puis de
+  relancer le playbook — un tag désactive aussi l'expiration et rend les
+  nœuds ciblables dans les règles :
 
 ```bash
 ansible-playbook ansible/playbooks/06-tailscale.yml --vault-password-file .vault_pass -e tailscale_tags=tag:k3s
