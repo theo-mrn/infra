@@ -166,8 +166,14 @@ ansible-playbook ansible/playbooks/02-k3s.yml --tags kubeconfig --limit master
 Faite dans le repo GitOps
 [argocd_registry](https://github.com/theo-mrn/argocd_registry) : un middleware
 Traefik `tailnet-only` (`ipAllowList`) est appliqué aux IngressRoutes
-d'administration. Une requête venant d'Internet reçoit 403 avant d'atteindre
-le service.
+d'administration. Une requête venant d'Internet reçoit **404** avant
+d'atteindre le service (`rejectStatusCode: 404`) : un 403 confirmerait qu'un
+service existe derrière et signalerait une cible protégée aux scanners.
+
+Le masquage est partiel et c'est assumé — le certificat Let's Encrypt expose
+les hostnames dans les logs Certificate Transparency (crt.sh) et le DNS
+public les résout. Le gain porte sur les scans automatisés, pas sur une
+recherche ciblée.
 
 Deux prérequis découverts à l'application :
 
