@@ -3,6 +3,24 @@
   stat:
     path: /usr/local/bin/k3s
   register: k3s_binary
+  tags: [tls-san]
+
+# Le certificat de l'API doit couvrir l'IP tailnet : depuis le durcissement du
+# firewall (playbook 05), le port 6443 n'est joignable que par le tailnet, et
+# kubectl rejetterait un certificat qui ne liste que l'IP publique.
+# Fichier de config déclaratif : s'applique aussi à une install existante,
+# contrairement aux flags passés au script d'installation.
+- name: Declare API server TLS SANs
+  copy:
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+    content: |
+      # Géré par Ansible (rôle k3s_master) — ne pas éditer à la main.
+      tls-san:
+        - "{{ ansible_host }}"
+        - "{{ node_public_ip }}"
+  register: k3s_config
+  tags: [tls-san]
 
 - name: Install k3s master
   shell: |
@@ -13,6 +31,31 @@
   when: not k3s_binary.stat.exists
   args:
     creates: /usr/local/bin/k3s
+
+# Les certificats existants ne sont pas régénérés au simple redémarrage :
+# il faut supprimer ceux du serveur pour que k3s les réémette avec les SANs.
+- name: Regenerate API certificates when the SAN list changed
+  block:
+    - name: Remove existing API server certificates
+      file:
+        path: "/var/lib/rancher/k3s/server/tls/{{ item }}"
+        state: absent
+      loop:
+        - serving-kube-apiserver.crt
+        - serving-kube-apiserver.key
+
+    - name: Restart k3s to reissue certificates
+      service:
+        name: k3s
+        state: restarted
+
+    - name: Wait for the API to answer again
+      wait_for:
+        port: 6443
+        host: "{{ ansible_host }}"
+        timeout: 120
+  when: k3s_config.changed and k3s_binary.stat.exists
+  tags: [tls-san]
 
 - name: Wait for k3s to be ready
   wait_for:
@@ -28,15 +71,21 @@
   set_fact:
     k3s_node_token: "{{ k3s_token_raw.content | b64decode | trim }}"
 
+# Tag 'kubeconfig' : permet de régénérer le fichier local sans réinstaller k3s
+#   ansible-playbook playbooks/02-k3s.yml --tags kubeconfig --limit master
 - name: Fetch kubeconfig
   fetch:
     src: /etc/rancher/k3s/k3s.yaml
     dest: "{{ playbook_dir }}/../kubeconfig.yml"
     flat: yes
+  tags: [kubeconfig]
 
+# ansible_host est l'IP tailnet depuis le durcissement du firewall (playbook
+# 05) : le port 6443 n'est plus joignable depuis l'IP publique.
 - name: Fix kubeconfig server address
   delegate_to: localhost
   replace:
     path: "{{ playbook_dir }}/../kubeconfig.yml"
     regexp: 'https://127\.0\.0\.1:6443'
     replace: "https://{{ ansible_host }}:6443"
+  tags: [kubeconfig]

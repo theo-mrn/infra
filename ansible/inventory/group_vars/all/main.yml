@@ -1,12 +1,23 @@
 ---
-# IP de gestion perso (poste de Theo, pas dans l'inventaire k3s)
-personal_management_ip: "37.71.179.238"
+# Réseau privé Tailscale (plage CGNAT). Les nœuds y sont joints par le rôle
+# `tailscale` (playbook 06). C'est la source d'accès admin de référence :
+# elle ne dépend ni du FAI, ni d'une IP résidentielle qui change.
+tailscale_cgnat: "100.64.0.0/10"
 
-# Liste dérivée automatiquement des hosts masters + workers de l'inventaire.
-# Ajouter un node = l'ajouter dans hosts.yml, cette liste se met à jour seule.
+# IP publique de secours pour l'accès de gestion.
+# Volontairement vide : l'accès admin passe par le tailnet. Ne renseigner
+# temporairement que si Tailscale est indisponible et qu'il faut un accès
+# de dépannage depuis une IP fixe connue.
+personal_management_ip: ""
+
+# Sources autorisées sur les ports sensibles (SSH, 6443, 10250).
+# = tailnet + les IP PUBLIQUES des nœuds (trafic intra-cluster : k3s et
+#   Flannel communiquent sur les IP publiques, pas sur le tailnet)
+#   + éventuellement l'IP de secours ci-dessus si elle est renseignée.
 management_ips: >-
   {{
-    [personal_management_ip]
-    + groups['masters'] | map('extract', hostvars, 'ansible_host') | list
-    + groups['workers'] | map('extract', hostvars, 'ansible_host') | list
+    [tailscale_cgnat]
+    + ([personal_management_ip] if personal_management_ip | length > 0 else [])
+    + groups['masters'] | map('extract', hostvars, 'node_public_ip') | list
+    + groups['workers'] | map('extract', hostvars, 'node_public_ip') | list
   }}

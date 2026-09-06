@@ -1,11 +1,23 @@
 ---
-# Usage: ansible-playbook playbooks/05-firewall-hardening.yml --ask-vault-pass
-# Restreint les ports sensibles aux IPs de gestion uniquement
+# Usage: ansible-playbook playbooks/05-firewall-hardening.yml --vault-password-file .vault_pass
+#
+# Restreint SSH / 6443 / 10250 au réseau Tailscale (+ les nœuds entre eux).
+# management_ips est calculée dans inventory/group_vars/all/main.yml.
+#
+# PRÉREQUIS : le playbook 06-tailscale.yml doit avoir été appliqué et
+# `ssh root@<ip-100.x>` doit fonctionner. Sinon ce playbook coupe l'accès.
+# Un garde-fou en fin de playbook restaure l'accès SSH public si la
+# connexion devient injoignable juste après l'application des règles.
 - name: Firewall hardening - restrict sensitive ports
   hosts: all
   become: true
-  # management_ips est calculée dynamiquement depuis l'inventaire
-  # (voir inventory/group_vars/all/main.yml) — pas besoin de la maintenir ici.
+
+  pre_tasks:
+    - name: Verify the node is connected to the tailnet
+      ansible.builtin.command: tailscale ip -4
+      register: ts_check
+      changed_when: false
+      failed_when: ts_check.rc != 0 or '100.' not in ts_check.stdout
 
   tasks:
     # SSH
@@ -84,6 +96,31 @@
     - name: Reload UFW
       community.general.ufw:
         state: enabled
+
+    # Filet de sécurité : ces règles retirent l'accès SSH public. Si la
+    # connexion ne revient pas, on réautorise SSH depuis n'importe où plutôt
+    # que de laisser le nœud injoignable (console Hostinger uniquement).
+    - name: Wait for SSH to accept connections after hardening
+      ansible.builtin.wait_for_connection:
+        connect_timeout: 10
+        sleep: 2
+        timeout: 30
+      register: fw_post_check
+      ignore_errors: true
+
+    - name: Roll back to public SSH if the node became unreachable
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+      when: fw_post_check is failed
+
+    - name: Fail loudly if the firewall had to be rolled back
+      ansible.builtin.fail:
+        msg: >
+          SSH est devenu injoignable sur {{ inventory_hostname }} après
+          l'application des règles : l'accès SSH public a été restauré.
+          Vérifier que Tailscale est bien actif sur ce nœud avant de rejouer.
+      when: fw_post_check is failed
 
     - name: Show UFW status
       ansible.builtin.command: ufw status numbered
