@@ -226,9 +226,18 @@ du navigateur (`chrome://net-internals/#dns`).
 
 ### Reste à faire
 
-- **Le tag `tag:k3s`** n'est pas activé : il doit d'abord être déclaré dans
-  les `tagOwners` de l'ACL du tailnet. Sans lui, les clés des nœuds expirent
-  (~6 mois) et il faut les ré-authentifier à la main. Une fois l'ACL en place :
+- **Expiration des clés des nœuds — échéance 5 mars 2027.** Les trois nœuds
+  expirent le même jour ; ils sortiraient du tailnet simultanément et SSH
+  comme l'API k3s deviendraient injoignables (rattrapage par la console
+  Hostinger uniquement). Traité en désactivant l'expiration machine par
+  machine dans
+  [l'admin Tailscale](https://login.tailscale.com/admin/machines) :
+  menu `⋯` → *Disable key expiry*, sur `master`, `worker` et `worker2`
+  seulement — pas sur les postes clients, où l'expiration est une sécurité.
+
+  L'alternative est de déclarer `tag:k3s` dans les `tagOwners` de l'ACL puis
+  de relancer le playbook — un tag désactive aussi l'expiration, et rend les
+  nœuds ciblables dans les règles ACL :
 
 ```bash
 ansible-playbook ansible/playbooks/06-tailscale.yml --vault-password-file .vault_pass -e tailscale_tags=tag:k3s
