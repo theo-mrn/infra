@@ -58,12 +58,27 @@
     tailscale up
     --authkey={{ tailscale_authkey }}
     --hostname={{ tailscale_hostname }}
-    --advertise-tags={{ tailscale_tags }}
+    {% if tailscale_tags | length > 0 %}--advertise-tags={{ tailscale_tags }}{% endif %}
     {{ tailscale_up_args }}
   when:
     - tailscale_state | default('present') == 'present'
     - ts_status.rc != 0 or (ts_status.stdout | from_json).BackendState != 'Running'
+  register: ts_up
+  failed_when: false
   no_log: true
+
+# no_log masque aussi le message d'erreur : on le ré-expose ici en filtrant
+# la cle d'auth, pour que les echecs restent diagnostiquables.
+- name: Report tailscale up failure
+  fail:
+    msg: >-
+      tailscale up a echoue sur {{ inventory_hostname }} :
+      {{ ((ts_up.stderr | default('')) ~ ' ' ~ (ts_up.stdout | default('')))
+         | regex_replace('tskey-auth-[A-Za-z0-9_-]+', 'tskey-auth-REDACTED') }}
+  when:
+    - tailscale_state | default('present') == 'present'
+    - ts_up is defined
+    - (ts_up.rc | default(0)) != 0
 
 - name: Get Tailscale IPv4 address
   command: tailscale ip -4

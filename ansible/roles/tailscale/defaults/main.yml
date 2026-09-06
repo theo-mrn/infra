@@ -10,11 +10,20 @@ tailscale_authkey: "{{ vault_tailscale_authkey }}"
 # Nom de la machine dans le tailnet (par défaut : le nom d'inventaire).
 tailscale_hostname: "{{ inventory_hostname }}"
 
-# Tag ACL appliqué aux nœuds. Permet de cibler le cluster dans les ACL
-# Tailscale sans lister les machines une par une.
-tailscale_tags: "tag:k3s"
+# Tag ACL appliqué aux nœuds. Vide par défaut : un tag doit d'abord être
+# déclaré dans les "tagOwners" de l'ACL du tailnet, sinon `tailscale up`
+# échoue avec "requested tags are invalid or not permitted".
+# Pour l'activer plus tard : déclarer tag:k3s dans l'ACL, puis relancer le
+# playbook avec -e tailscale_tags=tag:k3s
+# Bénéfice du tag : désactive l'expiration de clé des nœuds (~6 mois).
+tailscale_tags: ""
 
 # --accept-dns=false : k3s gère sa propre résolution DNS (CoreDNS).
 # Laisser Tailscale réécrire /etc/resolv.conf casserait la résolution
 # intra-cluster sur les nœuds.
-tailscale_up_args: "--accept-dns=false"
+#
+# --reset : l'état déclaré ici fait autorité. Sans ce flag, `tailscale up`
+# refuse de modifier un réglage déjà enregistré sur le nœud (par un essai
+# précédent ou une commande manuelle) et exige de re-lister tous les flags
+# non-défaut. C'est ce qui rend le rôle réellement idempotent.
+tailscale_up_args: "--accept-dns=false --reset"
