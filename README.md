@@ -96,9 +96,20 @@ Objectif : joindre les services d'administration (ArgoCD, Grafana, Authelia,
 Traefik dashboard...) via un réseau privé WireGuard plutôt qu'en les exposant
 sur Internet.
 
-La migration est volontairement découpée. **Seule l'étape 1 est faite** — elle
-est purement additive : elle ajoute une interface réseau sur les nœuds et ne
-change rien au comportement actuel du cluster.
+La migration est terminée. Les interfaces d'administration ne répondent plus
+qu'aux clients du tailnet ; les produits publics (`www.trivyhub.fr`, landings)
+et les webhooks entrants restent joignables depuis Internet.
+
+| Host | Accès |
+|------|-------|
+| `argocd` `grafana` `auth` `traefik` `reports` `sonarqube` | tailnet |
+| `minio` (console) `s3` (API) | tailnet |
+| `jenkins` `n8n` | UI : tailnet — chemins de webhook : publics |
+| `www.trivyhub.fr`, landings | public |
+
+Les ports 80 et 443 restent ouverts : le filtrage est applicatif (middleware
+Traefik), pas au niveau du firewall. C'est ce qui permet au challenge HTTP-01
+de Let's Encrypt de continuer à renouveler les certificats.
 
 ### Étape 1 — installer Tailscale sur les nœuds ✅
 
@@ -126,39 +137,88 @@ Rollback complet (désinstalle Tailscale, retour à l'état actuel) :
 ansible-playbook ansible/playbooks/06-tailscale.yml --vault-password-file .vault_pass -e tailscale_state=absent
 ```
 
-### Étape 2 — firewall sur le tailnet (à faire)
+### Étape 2 — firewall restreint au tailnet ✅
 
-Remplacer `personal_management_ip` (IP résidentielle codée en dur dans
-`inventory/group_vars/all/main.yml`) par la plage CGNAT Tailscale
-`100.64.0.0/10` dans `05-firewall-hardening.yml`.
+`management_ips` (dans `inventory/group_vars/all/main.yml`) vaut désormais la
+plage CGNAT `100.64.0.0/10` au lieu d'une IP résidentielle codée en dur.
+SSH (22), l'API k3s (6443) et kubelet (10250) ne sont plus joignables depuis
+Internet.
 
-Bénéfice immédiat : si le FAI change l'IP du poste, l'accès SSH et k3s n'est
-plus perdu.
+```bash
+ansible-playbook ansible/playbooks/05-firewall-hardening.yml --vault-password-file .vault_pass
+```
 
-### Étape 3 — fermer les services admin (à faire)
+Conséquences, toutes gérées dans le code :
 
-Bascule des IngressRoutes admin sur un entrypoint Traefik lié à l'IP tailnet.
-Se fait dans le repo GitOps [argocd_registry](https://github.com/theo-mrn/argocd_registry),
-pas ici.
+- `ansible_host` pointe sur les IP tailnet dans `inventory/hosts.yml` ;
+  `node_public_ip` conserve l'IP publique, nécessaire aux règles
+  intra-cluster (k3s et Flannel communiquent sur les IP publiques).
+- Le certificat de l'API k3s doit couvrir l'IP tailnet, sinon `kubectl` le
+  rejette. Géré par `--tls-san` dans `/etc/rancher/k3s/config.yaml` :
 
-Points d'attention identifiés lors de l'analyse :
+```bash
+ansible-playbook ansible/playbooks/02-k3s.yml --tags tls-san --limit master
+ansible-playbook ansible/playbooks/02-k3s.yml --tags kubeconfig --limit master
+```
 
-- **Ne pas fermer le port 80.** Traefik utilise le `httpChallenge` Let's Encrypt
-  (`apps/traefik.yml`). Si le port 80 devient injoignable depuis Internet, les
-  certificats ne se renouvellent plus — et l'échec est silencieux pendant 90
-  jours. Le DNS-01 n'est pas une option simple : la zone `afflair.app` est sur
-  les NS par défaut Hostinger (`dns-parking.com`), pour lesquels lego n'a pas
-  de provider.
-- **Jenkins et n8n reçoivent des webhooks entrants** (cf. les règles `bypass`
-  sur `^/github-webhook/` et `^/webhook/` dans `apps/authelia.yml`). Ces
-  chemins doivent rester publics ; seule l'UI passe en privé.
-- **Authelia peut être fermé** malgré son rôle d'IdP OIDC : ses 4 clients
-  (Grafana, ArgoCD, MinIO, Jenkins) fonctionnent par redirection navigateur,
-  pas par appel serveur-à-serveur. Un navigateur sur le tailnet joint `auth.`
-  par le même chemin.
-- **Traefik est en `type: LoadBalancer`** (ServiceLB k3s) et écoute sur toutes
-  les interfaces. Un entrypoint réellement limité au tailnet demande un Service
-  dédié lié à l'IP `100.x`, pas juste une ligne de config.
+### Étape 3 — services admin restreints au tailnet ✅
+
+Faite dans le repo GitOps
+[argocd_registry](https://github.com/theo-mrn/argocd_registry) : un middleware
+Traefik `tailnet-only` (`ipAllowList`) est appliqué aux IngressRoutes
+d'administration. Une requête venant d'Internet reçoit 403 avant d'atteindre
+le service.
+
+Deux prérequis découverts à l'application :
+
+- **`externalTrafficPolicy: Local`** sur le Service Traefik. Sans lui, le SNAT
+  du ServiceLB remplace l'IP cliente par celle du pod svclb (`10.42.x.x`) et
+  le filtre ne distingue plus rien. Bénéfice annexe : CrowdSec voit enfin les
+  vraies IP au lieu d'adresses internes.
+- **Coolify a dû être supprimé** (`playbooks/07-remove-coolify.yml`). Installé
+  hors IaC sur le master, son proxy Traefik occupait 0.0.0.0:80 et :443 sans
+  rien router, ce qui empêchait le ServiceLB k3s de servir ces ports sur l'IP
+  Tailscale. Données archivées dans `/root/coolify-backup` sur le nœud.
+
+Jenkins et n8n sont scindés en deux IngressRoutes : les chemins de webhook
+restent publics (GitHub et les services tiers ne savent pas s'authentifier),
+l'interface passe en privé. Ces chemins étaient déjà en `bypass` Authelia,
+donc déjà ouverts — mais servis par la même route que l'UI.
+
+### Accès depuis un poste client — split-DNS
+
+Le DNS public de `*.cluster.afflair.app` pointe vers l'IP publique du master.
+Un navigateur, même avec Tailscale actif, sort donc par Internet et reçoit
+403. Être sur le tailnet ne suffit pas : encore faut-il que le nom résolve
+vers l'IP tailnet.
+
+Solution durable, à configurer une fois dans
+[l'admin Tailscale](https://login.tailscale.com/admin/dns) :
+
+> Nameservers → Add nameserver → Custom → `100.69.1.127`,
+> cocher **Restrict to domain** avec `cluster.afflair.app`
+
+Dépannage immédiat sur un poste, en attendant (local à cette machine) :
+
+```
+100.69.1.127  argocd.cluster.afflair.app
+100.69.1.127  grafana.cluster.afflair.app
+100.69.1.127  auth.cluster.afflair.app
+# ... un enregistrement par host admin
+```
+
+### Reste à faire
+
+- **Le tag `tag:k3s`** n'est pas activé : il doit d'abord être déclaré dans
+  les `tagOwners` de l'ACL du tailnet. Sans lui, les clés des nœuds expirent
+  (~6 mois) et il faut les ré-authentifier à la main. Une fois l'ACL en place :
+
+```bash
+ansible-playbook ansible/playbooks/06-tailscale.yml --vault-password-file .vault_pass -e tailscale_tags=tag:k3s
+```
+
+- **Rollback d'un service** : retirer le middleware `tailnet-only` de son
+  IngressRoute dans `argocd_registry` et pousser.
 
 ---
 
