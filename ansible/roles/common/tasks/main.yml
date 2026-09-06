@@ -21,11 +21,30 @@
     key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
     state: present
 
+- name: Ensure ssh service is enabled and running
+  service:
+    name: ssh
+    state: started
+    enabled: true
+
+- name: Remove cloud-init sshd drop-in that re-enables password auth
+  file:
+    path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+    state: absent
+  notify: restart sshd
+
 - name: Disable password authentication (after key is deployed)
   lineinfile:
     path: /etc/ssh/sshd_config
     regexp: "^#?PasswordAuthentication"
     line: "PasswordAuthentication no"
+  notify: restart sshd
+
+- name: Disable root login by password
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin prohibit-password"
   notify: restart sshd
 
 - name: Enable UFW and allow SSH
@@ -76,3 +95,49 @@
     state: enabled
     policy: deny
     direction: incoming
+
+- name: Wait for SSH to accept connections after UFW enable
+  wait_for_connection:
+    connect_timeout: 10
+    sleep: 2
+    timeout: 30
+  register: ufw_post_check
+  ignore_errors: true
+
+- name: Roll back UFW if SSH became unreachable after enable
+  ufw:
+    state: disabled
+  when: ufw_post_check is failed
+
+- name: Fail loudly if UFW had to be rolled back
+  fail:
+    msg: >
+      UFW was disabled again on {{ inventory_hostname }} because SSH became
+      unreachable right after enabling it. Investigate the rule set manually
+      (console access, not SSH) before re-enabling.
+  when: ufw_post_check is failed
+
+# Les VPS Hostinger ont un hostname système opaque (srv1346079). Le renommer
+# casserait k3s, qui enregistre ses nœuds par hostname — on ne touche donc pas
+# au hostname et on se contente d'un prompt lisible, purement cosmétique.
+#
+# Le PS1 est posé via .bashrc et non /etc/profile.d/ : le .bashrc de Debian
+# définit son propre PS1 et est sourcé après profile.d, il écraserait donc
+# la valeur. blockinfile en fin de fichier garantit qu'on a le dernier mot.
+- name: Show the inventory name in the shell prompt
+  blockinfile:
+    path: /root/.bashrc
+    create: true
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED — node name in prompt"
+    block: |
+      # Affiche le nom d'inventaire du nœud plutôt que le hostname Hostinger.
+      # Le hostname système reste inchangé : k3s en dépend.
+      PS1='\[\033[01;32m\]\u@{{ inventory_hostname }}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+  tags: [prompt]
+
+- name: Remove the earlier profile.d attempt
+  file:
+    path: /etc/profile.d/00-node-name.sh
+    state: absent
+  tags: [prompt]
