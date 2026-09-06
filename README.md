@@ -178,7 +178,15 @@ Deux prérequis découverts à l'application :
 - **Coolify a dû être supprimé** (`playbooks/07-remove-coolify.yml`). Installé
   hors IaC sur le master, son proxy Traefik occupait 0.0.0.0:80 et :443 sans
   rien router, ce qui empêchait le ServiceLB k3s de servir ces ports sur l'IP
-  Tailscale. Données archivées dans `/root/coolify-backup` sur le nœud.
+  Tailscale. Le playbook archive les données avant suppression ; la purge
+  définitive (archives + images Docker) est séparée et explicite :
+
+```bash
+ansible-playbook ansible/playbooks/07-remove-coolify.yml --vault-password-file .vault_pass -e coolify_purge=true
+```
+
+  Purge effectuée le 2026-09-06 : il ne reste plus rien de Coolify sur le
+  nœud.
 
 Jenkins et n8n sont scindés en deux IngressRoutes : les chemins de webhook
 restent publics (GitHub et les services tiers ne savent pas s'authentifier),

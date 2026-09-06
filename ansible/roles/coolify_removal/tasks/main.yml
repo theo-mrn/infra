@@ -73,3 +73,26 @@
         state: stopped
         enabled: false
       failed_when: false
+
+    # Purge definitive : archives et images. Rejouee explicitement via
+    #   ansible-playbook playbooks/07-remove-coolify.yml -e coolify_purge=true
+    # Separee de la suppression : celle-ci laisse une porte de sortie
+    # pendant quelques jours, la purge la ferme.
+    - name: Purge the Coolify backups and images
+      when: coolify_purge | default(false) | bool
+      block:
+        - name: Remove the backup archives
+          ansible.builtin.file:
+            path: "{{ coolify_backup_dir }}"
+            state: absent
+
+        - name: Remove the Coolify Docker images
+          ansible.builtin.shell: |
+            set -o pipefail
+            docker images --format '{% raw %}{{.Repository}}:{{.Tag}}{% endraw %}' \
+              | grep '^coollabsio/' | xargs -r docker rmi -f
+          args:
+            executable: /bin/bash
+          register: img_rm
+          changed_when: img_rm.stdout | length > 0
+          failed_when: false
