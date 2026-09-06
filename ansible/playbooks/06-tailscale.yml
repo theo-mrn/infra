@@ -1,0 +1,20 @@
+---
+# Étape 6 : installer Tailscale sur tous les nœuds (accès privé au cluster).
+#
+# Ce playbook est PUREMENT ADDITIF : il ajoute une interface réseau tailnet
+# et ne modifie ni UFW, ni les services exposés publiquement. Rien ne change
+# dans le comportement actuel du cluster.
+#
+# Prérequis : vault_tailscale_authkey dans inventory/group_vars/all/vault.yml
+#   (clé réutilisable : https://login.tailscale.com/admin/settings/keys)
+#
+# Usage:
+#   ansible-playbook playbooks/06-tailscale.yml --vault-password-file .vault_pass
+#
+# Rollback complet (désinstalle Tailscale, retour à l'état actuel) :
+#   ansible-playbook playbooks/06-tailscale.yml --vault-password-file .vault_pass -e tailscale_state=absent
+- name: Install Tailscale on all nodes
+  hosts: all
+  gather_facts: yes
+  roles:
+    - tailscale

@@ -1,0 +1,100 @@
+---
+# Étape 1 de la migration Tailscale : installer et joindre le tailnet.
+# Purement additif — ajoute une interface réseau, ne ferme aucun port.
+# Rollback : ansible-playbook playbooks/06-tailscale.yml -e tailscale_state=absent
+
+- name: Fail early if no auth key is provided
+  assert:
+    that:
+      - tailscale_authkey is defined
+      - tailscale_authkey | length > 0
+    fail_msg: >
+      vault_tailscale_authkey est vide ou absent. Générer une clé réutilisable
+      sur https://login.tailscale.com/admin/settings/keys puis l'ajouter dans
+      inventory/group_vars/all/vault.yml.
+  when: tailscale_state | default('present') == 'present'
+
+- name: Add Tailscale APT signing key
+  apt_key:
+    url: "https://pkgs.tailscale.com/stable/ubuntu/{{ ansible_distribution_release }}.noarmor.gpg"
+    keyring: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    state: present
+  when: tailscale_state | default('present') == 'present'
+
+- name: Add Tailscale APT repository
+  apt_repository:
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg]
+      https://pkgs.tailscale.com/stable/ubuntu {{ ansible_distribution_release }} main
+    filename: tailscale
+    state: present
+  when: tailscale_state | default('present') == 'present'
+
+- name: Install Tailscale
+  apt:
+    name: tailscale
+    state: present
+    update_cache: yes
+  when: tailscale_state | default('present') == 'present'
+
+- name: Ensure tailscaled is enabled and running
+  service:
+    name: tailscaled
+    state: started
+    enabled: true
+  when: tailscale_state | default('present') == 'present'
+
+# `tailscale up` n'est pas idempotent : on ne l'exécute que si le nœud
+# n'est pas déjà connecté au tailnet.
+- name: Check current Tailscale status
+  command: tailscale status --json
+  register: ts_status
+  changed_when: false
+  failed_when: false
+  when: tailscale_state | default('present') == 'present'
+
+- name: Join the tailnet
+  command: >-
+    tailscale up
+    --authkey={{ tailscale_authkey }}
+    --hostname={{ tailscale_hostname }}
+    --advertise-tags={{ tailscale_tags }}
+    {{ tailscale_up_args }}
+  when:
+    - tailscale_state | default('present') == 'present'
+    - ts_status.rc != 0 or (ts_status.stdout | from_json).BackendState != 'Running'
+  no_log: true
+
+- name: Get Tailscale IPv4 address
+  command: tailscale ip -4
+  register: ts_ip
+  changed_when: false
+  when: tailscale_state | default('present') == 'present'
+
+- name: Show Tailscale IP
+  debug:
+    msg: "{{ inventory_hostname }} → {{ ts_ip.stdout }}"
+  when: tailscale_state | default('present') == 'present'
+
+# --- Rollback ---------------------------------------------------------------
+
+- name: Disconnect from the tailnet
+  command: tailscale down
+  failed_when: false
+  when: tailscale_state | default('present') == 'absent'
+
+- name: Remove Tailscale
+  apt:
+    name: tailscale
+    state: absent
+    purge: true
+  when: tailscale_state | default('present') == 'absent'
+
+- name: Remove Tailscale APT repository
+  apt_repository:
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg]
+      https://pkgs.tailscale.com/stable/ubuntu {{ ansible_distribution_release }} main
+    filename: tailscale
+    state: absent
+  when: tailscale_state | default('present') == 'absent'

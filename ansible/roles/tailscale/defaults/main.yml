@@ -1,0 +1,20 @@
+---
+# Rôle purement additif : installe Tailscale et joint le tailnet.
+# Ne touche NI à UFW, NI aux services exposés — l'étape "fermer les services
+# au public" est volontairement séparée (voir README, section Tailscale).
+
+# Clé d'auth réutilisable, générée sur https://login.tailscale.com/admin/settings/keys
+# Stockée chiffrée dans inventory/group_vars/all/vault.yml.
+tailscale_authkey: "{{ vault_tailscale_authkey }}"
+
+# Nom de la machine dans le tailnet (par défaut : le nom d'inventaire).
+tailscale_hostname: "{{ inventory_hostname }}"
+
+# Tag ACL appliqué aux nœuds. Permet de cibler le cluster dans les ACL
+# Tailscale sans lister les machines une par une.
+tailscale_tags: "tag:k3s"
+
+# --accept-dns=false : k3s gère sa propre résolution DNS (CoreDNS).
+# Laisser Tailscale réécrire /etc/resolv.conf casserait la résolution
+# intra-cluster sur les nœuds.
+tailscale_up_args: "--accept-dns=false"
