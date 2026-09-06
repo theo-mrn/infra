@@ -1,0 +1,75 @@
+---
+# Coolify était installé sur le master (hors IaC : ni dans ce repo, ni dans
+# argocd_registry). Son proxy Traefik occupait 0.0.0.0:80 et :443, ce qui
+# empêchait le ServiceLB de k3s de binder ces ports sur l'IP Tailscale.
+#
+# Il ne routait rien : sa seule règle dynamique est un catch-all vers un
+# service vide, et le trafic du cluster passait déjà avant lui (KUBE-SERVICES
+# précède DOCKER dans la chaîne PREROUTING).
+#
+# Rollback : réinstallation via le script officiel Coolify. Les données sont
+# sauvegardées dans {{ coolify_backup_dir }} avant suppression.
+
+- name: Check whether Docker is present
+  ansible.builtin.command: which docker
+  register: docker_bin
+  changed_when: false
+  failed_when: false
+
+- name: Remove Coolify
+  when: docker_bin.rc == 0
+  block:
+    - name: List Coolify containers
+      ansible.builtin.shell: |
+        set -o pipefail
+        docker ps -a --format '{% raw %}{{.Names}}{% endraw %}' | grep '^coolify' || true
+      args:
+        executable: /bin/bash
+      register: coolify_containers
+      changed_when: false
+
+    - name: Back up Coolify data before removal
+      ansible.builtin.shell: |
+        set -eo pipefail
+        mkdir -p {{ coolify_backup_dir }}
+        if [ -d /data/coolify ]; then
+          tar czf {{ coolify_backup_dir }}/coolify-data.tar.gz -C /data coolify
+        fi
+        docker volume ls -q | grep '^coolify' | while read -r v; do
+          docker run --rm -v "$v":/src -v {{ coolify_backup_dir }}:/dst alpine \
+            tar czf "/dst/volume-$v.tar.gz" -C /src . 2>/dev/null || true
+        done
+      args:
+        executable: /bin/bash
+        creates: "{{ coolify_backup_dir }}/coolify-data.tar.gz"
+      when: coolify_containers.stdout | length > 0
+
+    - name: Stop and remove Coolify containers
+      ansible.builtin.shell: |
+        set -o pipefail
+        docker rm -f {{ coolify_containers.stdout_lines | join(' ') }}
+      args:
+        executable: /bin/bash
+      when: coolify_containers.stdout | length > 0
+
+    - name: Remove Coolify volumes
+      ansible.builtin.shell: |
+        set -o pipefail
+        docker volume ls -q | grep '^coolify' | xargs -r docker volume rm
+      args:
+        executable: /bin/bash
+      register: vol_rm
+      changed_when: vol_rm.stdout | length > 0
+      failed_when: false
+
+    - name: Remove Coolify data directory
+      ansible.builtin.file:
+        path: /data/coolify
+        state: absent
+
+    - name: Disable the Coolify systemd unit if present
+      ansible.builtin.systemd:
+        name: coolify
+        state: stopped
+        enabled: false
+      failed_when: false

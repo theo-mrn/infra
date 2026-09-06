@@ -1,0 +1,17 @@
+---
+# Supprime Coolify du master.
+#
+# Coolify avait été installé hors IaC et son proxy Traefik occupait les ports
+# 80/443 de l'hôte sans rien router — il empêchait le ServiceLB k3s de servir
+# ces ports sur l'IP Tailscale.
+#
+# Les données (/data/coolify + volumes Docker) sont archivées dans
+# /root/coolify-backup sur le nœud avant suppression.
+#
+# Usage:
+#   ansible-playbook playbooks/07-remove-coolify.yml --vault-password-file .vault_pass
+- name: Remove Coolify from the master node
+  hosts: masters
+  gather_facts: yes
+  roles:
+    - coolify_removal

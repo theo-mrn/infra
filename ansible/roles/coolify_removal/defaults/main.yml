@@ -1,0 +1,3 @@
+---
+# Destination des archives de sauvegarde, sur le nœud lui-même.
+coolify_backup_dir: /root/coolify-backup
