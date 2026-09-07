@@ -161,6 +161,13 @@ ansible-playbook ansible/playbooks/02-k3s.yml --tags tls-san --limit master
 ansible-playbook ansible/playbooks/02-k3s.yml --tags kubeconfig --limit master
 ```
 
+- **`~/.kube/config` doit aussi pointer sur l'IP tailnet.** Le playbook ne
+  régénère que `ansible/kubeconfig.yml` ; le kubeconfig par défaut est un
+  fichier personnel, hors du repo. S'il reste sur l'IP publique, `kubectl`
+  échoue avec `dial tcp 76.13.44.160:6443: i/o timeout` — le port 6443 n'y
+  répond plus. Remplacer l'adresse du `server:` par
+  `https://100.69.1.127:6443`.
+
 ### Étape 3 — services admin restreints au tailnet ✅
 
 Faite dans le repo GitOps
