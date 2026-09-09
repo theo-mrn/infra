@@ -10,6 +10,48 @@
 
 DNS : `cluster.afflair.app` + `*.cluster.afflair.app` → 76.13.44.160
 
+Depuis la migration Tailscale, Ansible et `kubectl` joignent les nœuds par
+leurs IP tailnet (`100.69.1.127`, `100.93.183.65`, `100.78.224.75`) : SSH,
+l'API k3s et kubelet ne répondent plus sur les IP publiques.
+
+### Le control-plane n'est pas tainté — c'est délibéré
+
+Le master exécute des workloads applicatifs. Un audit peut le signaler comme
+un défaut ; sur ce cluster, le tainter ferait plus de mal que de bien.
+
+**Ce que ça casserait :**
+
+- **Authelia** a une `nodeAffinity` *requise* sur `node-role.kubernetes.io/control-plane`
+  (voir `apps/authelia.yml`). Avec un taint sans toleration, il devient non
+  planifiable — le SSO tombe, et avec lui l'accès à tous les services.
+- **Traefik** y est épinglé par `nodeSelector`, ce qui est nécessaire :
+  `externalTrafficPolicy: Local` ne sert le trafic que depuis les nœuds
+  portant un pod Traefik, et le DNS pointe sur le master. Il tolère déjà le
+  taint, mais la contrainte reste.
+- **Les replicas PostgreSQL** (`agent-index-2`, `n8n-postgres-3`) ont une
+  anti-affinité *requise* sur 3 nœuds. Les évincer du master les rend non
+  planifiables : la réplication mise en place est perdue.
+- **Les DaemonSets** de supervision (`crowdsec-agent`, `node-exporter`,
+  `promtail`) doivent couvrir tous les nœuds. Sans toleration, le master
+  cesse d'être surveillé.
+
+Onze pods seraient évincés au total, et il faudrait ajouter des tolerations
+dans six charts, dont plusieurs upstream.
+
+**Pourquoi le bénéfice ne le justifie pas :**
+
+Le risque théorique est qu'un workload gourmand dégrade l'apiserver. Mesuré
+le 2026-09-09 : le master est à 55% de CPU et 62% de mémoire, sans pression.
+Les cinq OOM kills du mois étaient des dépassements de limite *conteneur*
+(`CONSTRAINT_MEMCG`, jobs Trivy), pas une saturation du nœud — ils n'ont pas
+affecté k3s. Et les LimitRange posés depuis plafonnent chaque conteneur.
+
+Sur trois nœuds à 2 CPU, réserver le master reviendrait à se priver d'un
+tiers de la capacité pour un risque qui ne s'est pas matérialisé.
+
+À reconsidérer si le cluster grossit, ou si la charge du master devient
+réellement contrainte.
+
 ## Stack
 
 Tous les composants système sont déployés via ArgoCD (Applications dans
