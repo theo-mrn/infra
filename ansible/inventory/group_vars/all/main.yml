@@ -21,3 +21,14 @@ management_ips: >-
     + groups['masters'] | map('extract', hostvars, 'node_public_ip') | list
     + groups['workers'] | map('extract', hostvars, 'node_public_ip') | list
   }}
+
+# Version k3s epinglee pour TOUS les noeuds.
+#
+# Sans ce pin, le script get.k3s.io installe la derniere stable au moment de
+# l'execution : master et worker (juin 2026) sont partis en v1.35.5, worker2
+# (septembre) en v1.36.4. Un kubelet plus recent que l'apiserver n'est jamais
+# supporte par Kubernetes — l'inverse l'est, jusqu'a 3 versions mineures.
+#
+# Pour monter le cluster de version : changer cette valeur, appliquer d'abord
+# sur les masters, puis sur les workers. Jamais l'inverse.
+k3s_version: "v1.35.5+k3s1"

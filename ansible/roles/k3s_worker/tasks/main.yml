@@ -4,9 +4,13 @@
     path: /usr/local/bin/k3s
   register: k3s_binary
 
+# INSTALL_K3S_VERSION epingle la version (voir k3s_version dans
+# group_vars/all/main.yml). Un kubelet plus recent que l'apiserver n'est pas
+# supporte : sans ce pin, un worker ajoute plus tard part en avance.
 - name: Install k3s worker
   shell: |
-    curl -sfL https://get.k3s.io | sh -s - agent \
+    curl -sfL https://get.k3s.io | \
+      INSTALL_K3S_VERSION={{ k3s_version }} sh -s - agent \
       --server https://{{ hostvars['master']['ansible_host'] }}:6443 \
       --token {{ hostvars['master']['k3s_node_token'] }} \
       --node-name {{ inventory_hostname }}
@@ -22,3 +26,48 @@
     name: k3s-agent
     state: started
     enabled: yes
+
+# Realignement de version sur un noeud DEJA installe.
+#
+# La tache d'installation ci-dessus ne rejoue pas (creates: /usr/local/bin/k3s),
+# donc un noeud parti sur une mauvaise version y reste. Cette tache le remet
+# sur k3s_version. Elle ne s'execute que si la version differe.
+#
+#   ansible-playbook playbooks/02-k3s.yml --tags k3s-version --limit worker2
+#
+# Les pods du noeud sont replanifies ailleurs pendant ~2 min.
+- name: Read the installed k3s version
+  ansible.builtin.command: k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+  tags: [k3s-version]
+
+- name: Realign the agent on the pinned k3s version
+  when:
+    - k3s_installed.rc == 0
+    - k3s_version not in k3s_installed.stdout
+  tags: [k3s-version]
+  block:
+    - name: Reinstall the k3s agent at the pinned version
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | \
+          INSTALL_K3S_VERSION={{ k3s_version }} \
+          INSTALL_K3S_EXEC="agent" sh -
+      environment:
+        K3S_URL: "https://{{ hostvars['master']['ansible_host'] }}:6443"
+        K3S_TOKEN: "{{ hostvars['master']['k3s_node_token'] }}"
+        K3S_NODE_NAME: "{{ inventory_hostname }}"
+
+    - name: Restart the agent
+      ansible.builtin.service:
+        name: k3s-agent
+        state: restarted
+
+    - name: Wait for the node to report the pinned version
+      ansible.builtin.command: k3s --version
+      register: k3s_after
+      until: k3s_version in k3s_after.stdout
+      retries: 20
+      delay: 6
+      changed_when: false
