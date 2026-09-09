@@ -42,6 +42,27 @@ Pour vérifier que le fichier est valide :
 gpg --decrypt ~/sealed-secrets-master-key.yaml.gpg | head -5
 ```
 
+> ⚠️ **Cette sauvegarde périme.** Le controller génère une nouvelle clé tous
+> les 30 jours et conserve les anciennes pour déchiffrer l'existant. Une
+> sauvegarde ne contient donc que les clés présentes le jour de l'export :
+> tout secret scellé après cette date sera **définitivement illisible** sur un
+> cluster reconstruit.
+>
+> Constaté le 2026-09-09 : la sauvegarde datait du 9 juin et ne couvrait que
+> 2 des 4 clés — les secrets du namespace `devops-agent`, scellés le jour
+> même, n'auraient pas été récupérables.
+>
+> Vérifier l'écart avant de s'y fier :
+>
+> ```bash
+> kubectl get secret -n kube-system \
+>   -l sealedsecrets.bitnami.com/sealed-secrets-key \
+>   -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.creationTimestamp}{"\n"}{end}'
+> ```
+>
+> Si la clé la plus récente est postérieure à la sauvegarde, la refaire —
+> horodater le fichier (`...-AAAAMMJJ.yaml.gpg`) pour que l'écart soit visible.
+
 Pour restaurer la clé sur un nouveau cluster :
 
 ```bash
