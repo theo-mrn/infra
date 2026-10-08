@@ -1,0 +1,20 @@
+---
+# Nettoyage des images par le kubelet (rôle kubelet_image_gc), un nœud à la fois :
+# les pods continuent de tourner pendant le redémarrage de k3s / k3s-agent.
+# Usage: ansible-playbook playbooks/08-kubelet-image-gc.yml
+- name: Kubelet image garbage collection
+  hosts: workers:masters
+  serial: 1
+  become: true
+  roles:
+    - kubelet_image_gc
+  post_tasks:
+    - name: Flush the restart before moving to the next node
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for the kubelet to answer again
+      ansible.builtin.wait_for:
+        port: 10250
+        host: "{{ ansible_host }}"
+        delay: 5
+        timeout: 180

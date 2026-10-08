@@ -1,0 +1,26 @@
+---
+# Dossier de compléments du kubelet géré par k3s (00-k3s-defaults.conf y est réécrit à
+# chaque démarrage) : un fichier à part, indépendant de config.yaml que les rôles
+# k3s_master et cis_hardening se partagent.
+- name: Ensure the kubelet drop-in directory exists
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Configure kubelet image garbage collection
+  ansible.builtin.copy:
+    dest: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/50-image-gc.conf
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      # Géré par Ansible (rôle kubelet_image_gc) — ne pas éditer à la main.
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      imageGCHighThresholdPercent: {{ kubelet_image_gc_high_percent }}
+      imageGCLowThresholdPercent: {{ kubelet_image_gc_low_percent }}
+      imageMaximumGCAge: {{ kubelet_image_gc_max_age }}
+  notify: restart k3s

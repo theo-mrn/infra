@@ -1,0 +1,8 @@
+---
+# Nettoyage des images par le kubelet. Défauts de Kubernetes : 85 % / 80 %, sans âge
+# maximum ; avec une vingtaine d'images neuves à chaque déploiement, le disque se
+# remplissait plus vite que le ménage (incident du 2026-10-08 : master à 98 %).
+kubelet_image_gc_high_percent: 70
+kubelet_image_gc_low_percent: 50
+# Une image inutilisée depuis plus longtemps part, même disque peu rempli
+kubelet_image_gc_max_age: 72h
