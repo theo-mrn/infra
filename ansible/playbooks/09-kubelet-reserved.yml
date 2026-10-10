@@ -1,9 +1,5 @@
 ---
-# Réservation mémoire hors pods et seuil d'éviction (rôle kubelet_reserved).
-# Master seulement pour l'instant : les valeurs des défauts sont dimensionnées pour lui.
-# Les pods continuent de tourner pendant le redémarrage de k3s.
-# Usage: ansible-playbook playbooks/09-kubelet-reserved.yml
-#        ansible-playbook playbooks/09-kubelet-reserved.yml --check --diff   (aperçu)
+# Usage: ansible-playbook playbooks/09-kubelet-reserved.yml --vault-password-file ../.vault_pass
 - name: Kubelet memory reservation
   hosts: masters
   serial: 1

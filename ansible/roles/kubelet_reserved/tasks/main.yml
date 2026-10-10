@@ -1,9 +1,5 @@
 ---
-# Même mécanisme que kubelet_image_gc : un complément dans kubelet.conf.d, hors de
-# config.yaml que les rôles k3s_master et cis_hardening se partagent.
-
-# Le cgroup kubepods sera plafonné à capacité - réservations : si les pods consomment
-# déjà plus, le redémarrage du kubelet déclencherait des OOM immédiats.
+# Le cgroup kubepods sera plafonné : refuser si les pods consomment déjà plus
 - name: Read current memory usage of all pods
   ansible.builtin.slurp:
     src: /sys/fs/cgroup/kubepods.slice/memory.current
