@@ -1,0 +1,22 @@
+---
+# Réservation mémoire hors pods et seuil d'éviction (rôle kubelet_reserved).
+# Master seulement pour l'instant : les valeurs des défauts sont dimensionnées pour lui.
+# Les pods continuent de tourner pendant le redémarrage de k3s.
+# Usage: ansible-playbook playbooks/09-kubelet-reserved.yml
+#        ansible-playbook playbooks/09-kubelet-reserved.yml --check --diff   (aperçu)
+- name: Kubelet memory reservation
+  hosts: masters
+  serial: 1
+  become: true
+  roles:
+    - kubelet_reserved
+  post_tasks:
+    - name: Flush the restart before moving on
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for the kubelet to answer again
+      ansible.builtin.wait_for:
+        port: 10250
+        host: "{{ ansible_host }}"
+        delay: 5
+        timeout: 180

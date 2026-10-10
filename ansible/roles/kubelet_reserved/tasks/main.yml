@@ -1,0 +1,52 @@
+---
+# Même mécanisme que kubelet_image_gc : un complément dans kubelet.conf.d, hors de
+# config.yaml que les rôles k3s_master et cis_hardening se partagent.
+
+# Le cgroup kubepods sera plafonné à capacité - réservations : si les pods consomment
+# déjà plus, le redémarrage du kubelet déclencherait des OOM immédiats.
+- name: Read current memory usage of all pods
+  ansible.builtin.slurp:
+    src: /sys/fs/cgroup/kubepods.slice/memory.current
+  register: kubepods_memory
+
+- name: Refuse a cap below what pods already use
+  ansible.builtin.assert:
+    that:
+      - (kubepods_memory.content | b64decode | int) < kubepods_cap_bytes | int
+    fail_msg: >-
+      Les pods consomment {{ (kubepods_memory.content | b64decode | int / 1048576) | int }}Mi,
+      au-dessus du futur plafond de {{ (kubepods_cap_bytes | int / 1048576) | int }}Mi.
+      Réduire les réservations ou déplacer des pods avant d'appliquer.
+  vars:
+    kubepods_cap_bytes: >-
+      {{ ansible_facts['memtotal_mb'] * 1048576
+         - (kubelet_kube_reserved_memory | regex_replace('Mi$', '') | int) * 1048576
+         - (kubelet_system_reserved_memory | regex_replace('Mi$', '') | int) * 1048576 }}
+
+- name: Ensure the kubelet drop-in directory exists
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Configure kubelet memory reservation and eviction
+  ansible.builtin.copy:
+    dest: /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/60-reserved.conf
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      # Géré par Ansible (rôle kubelet_reserved) — ne pas éditer à la main.
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      kubeReserved:
+        memory: {{ kubelet_kube_reserved_memory }}
+      systemReserved:
+        memory: {{ kubelet_system_reserved_memory }}
+      evictionHard:
+        memory.available: {{ kubelet_eviction_hard_memory }}
+        nodefs.available: "{{ kubelet_eviction_hard_nodefs }}"
+        imagefs.available: "{{ kubelet_eviction_hard_imagefs }}"
+  notify: restart k3s

@@ -1,0 +1,17 @@
+---
+# Mémoire réservée hors pods. Sans réservation, allocatable = capacité : le scheduler
+# distribuait aux pods la RAM déjà prise par k3s-server, et le noyau finissait en OOM
+# global (incident du 2026-10-10 : master à 83 %, API server effondré, pods tués en boucle).
+#
+# Valeurs dimensionnées pour le master (8 Go), mesurées le 2026-10-10 après redémarrage :
+# k3s.service 3,8 Go (cache de pages compris), pods 2,2 Go, requests mémoire 3816Mi.
+#   allocatable = 7941Mi - 2560 - 512 - 500 = 4369Mi  (>= requests : aucun pod rejeté)
+#   plafond du cgroup kubepods = 7941Mi - 2560 - 512 = 4869Mi  (>= usage des pods)
+# k3s consomme plus que kubeReserved : le seuil d'éviction rattrape l'écart, le kubelet
+# évince des pods avant que le noyau ne tue au hasard.
+kubelet_kube_reserved_memory: 2560Mi
+kubelet_system_reserved_memory: 512Mi
+kubelet_eviction_hard_memory: 500Mi
+# Repris de 00-k3s-defaults.conf : redéfinir evictionHard ne doit pas perdre les seuils disque
+kubelet_eviction_hard_nodefs: "5%"
+kubelet_eviction_hard_imagefs: "5%"
