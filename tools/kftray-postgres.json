@@ -1,0 +1,32 @@
+[
+  {
+    "alias": "pg-vtt-prod",
+    "service": "vtt-pg-prod-rw",
+    "namespace": "data",
+    "local_port": 5433,
+    "remote_port": 5432,
+    "context": "default",
+    "workload_type": "service",
+    "protocol": "tcp"
+  },
+  {
+    "alias": "pg-vtt-staging",
+    "service": "vtt-pg-rw",
+    "namespace": "data",
+    "local_port": 5434,
+    "remote_port": 5432,
+    "context": "default",
+    "workload_type": "service",
+    "protocol": "tcp"
+  },
+  {
+    "alias": "pg-sonarqube",
+    "service": "sonarqube-db-postgresql",
+    "namespace": "sonarqube",
+    "local_port": 5435,
+    "remote_port": 5432,
+    "context": "default",
+    "workload_type": "service",
+    "protocol": "tcp"
+  }
+]
