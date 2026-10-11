@@ -1,0 +1,5 @@
+---
+# Allocatable 6617Mi : à garder >= requests mémoire des workers (6274Mi sur worker au 2026-10-11)
+kubelet_kube_reserved_memory: 768Mi
+kubelet_system_reserved_memory: 256Mi
+kubelet_eviction_hard_memory: 300Mi

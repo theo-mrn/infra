@@ -1,7 +1,7 @@
 ---
 # Usage: ansible-playbook playbooks/09-kubelet-reserved.yml --vault-password-file ../.vault_pass
 - name: Kubelet memory reservation
-  hosts: masters
+  hosts: masters:workers
   serial: 1
   become: true
   roles:
