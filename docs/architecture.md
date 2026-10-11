@@ -38,19 +38,18 @@ un défaut ; sur ce cluster, le tainter ferait plus de mal que de bien.
 Onze pods seraient évincés au total, et il faudrait ajouter des tolerations
 dans six charts, dont plusieurs upstream.
 
-**Pourquoi le bénéfice ne le justifie pas :**
+**Le risque s'est matérialisé le 2026-10-10** : OOM global sur le master,
+apiserver à 16 s de latence, pods tués en boucle (incident
+`argocd_registry/docs/incidents/2026-10-10-saturation-master.md`). Le taint
+reste écarté pour les raisons ci-dessus ; la protection passe par la
+**réservation de ressources** du kubelet (rôle `kubelet_reserved`, playbook
+09) : 2,5 Go réservés à k3s sur le master, ~1 Go sur les workers, seuil
+d'éviction. Le scheduler ne distribue plus aux pods la mémoire du
+control-plane, et le kubelet évince avant que le noyau ne tue au hasard.
 
-Le risque théorique est qu'un workload gourmand dégrade l'apiserver. Mesuré
-le 2026-09-09 : le master est à 55% de CPU et 62% de mémoire, sans pression.
-Les cinq OOM kills du mois étaient des dépassements de limite *conteneur*
-(`CONSTRAINT_MEMCG`, jobs Trivy), pas une saturation du nœud — ils n'ont pas
-affecté k3s. Et les LimitRange posés depuis plafonnent chaque conteneur.
-
-Sur trois nœuds à 2 CPU, réserver le master reviendrait à se priver d'un
-tiers de la capacité pour un risque qui ne s'est pas matérialisé.
-
-À reconsidérer si le cluster grossit, ou si la charge du master devient
-réellement contrainte.
+À surveiller : la mémoire de `k3s-server` (1,4 Go après la suppression des
+SBOM Trivy, 4 Go avant). Si elle remonte, chercher quels objets grossissent
+dans l'apiserver avant d'augmenter la réservation.
 
 ## Stack
 
